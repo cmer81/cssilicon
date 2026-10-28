@@ -8,3 +8,5 @@ __pycache__/
 *.pyc
 corpus/vcs/
 *.dxvk-cache
+.superpowers/
+.venv/
