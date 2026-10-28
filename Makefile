@@ -125,3 +125,8 @@ test-display: tools/display/DisplayModes.swift tests/unit/display_modes_tests.sw
 	cp tests/unit/display_modes_tests.swift build/tests/main.swift   # top-level code only compiles from main.swift
 	swiftc -target arm64-apple-macos13 -o build/tests/display_modes tools/display/DisplayModes.swift build/tests/main.swift
 	build/tests/display_modes
+test-launcher: tools/launcher/Version.swift tests/unit/version_tests.swift
+	@mkdir -p build/tests/launcher
+	cp tests/unit/version_tests.swift build/tests/launcher/main.swift
+	swiftc -target arm64-apple-macos13 -o build/tests/version tools/launcher/Version.swift build/tests/launcher/main.swift
+	build/tests/version

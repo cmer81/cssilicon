@@ -7,7 +7,7 @@ cd "$(dirname "$0")"; ROOT="$(cd ../.. && pwd)"
 OUT="$ROOT/build/launcher"; APP="$OUT/CSSilicon.app"; RES="$APP/Contents/Resources"
 VERSION="$(git -C "$ROOT" describe --tags --always 2>/dev/null || echo 0.1)"
 rm -rf "$OUT"; mkdir -p "$APP/Contents/MacOS" "$RES/cssmt/tools"
-swiftc -O -parse-as-library -target arm64-apple-macos13 CSSLauncher.swift -o "$APP/Contents/MacOS/cssilicon"
+swiftc -O -parse-as-library -target arm64-apple-macos13 CSSLauncher.swift Version.swift -o "$APP/Contents/MacOS/cssilicon"
 "$ROOT/.venv/bin/python" make_icon.py "$OUT/cssilicon.iconset" "$OUT/icon-preview.png"
 iconutil -c icns "$OUT/cssilicon.iconset" -o "$RES/cssilicon.icns"
 # bundled cssmt: only what the launcher runs (scripts, configs, wine patch tool, displaymode, licence notes)
@@ -65,7 +65,8 @@ cat > "$SES/Contents/Info.plist" <<PLIST
 </dict></plist>
 PLIST
 codesign -f -s - --deep "$APP" >/dev/null 2>&1
-echo "built $APP"
+(cd "$OUT" && ditto -c -k --keepParent CSSilicon.app CSSilicon-app.zip)   # release asset (the updater looks for this name)
+echo "built $APP  (+ $OUT/CSSilicon-app.zip, version $VERSION)"
 if [ "${1:-}" != --no-install ]; then
   rm -rf "/Applications/cssmt.app" "/Applications/CSSilicon.app"; cp -R "$APP" /Applications/   # cssmt.app: name of early builds
   /System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister -f /Applications/CSSilicon.app
