@@ -17,5 +17,8 @@ instructions in Wine's `winemac.so` (see `docs/mouse-input.md`). The shipped run
 applied locally and can be reverted. The corresponding Wine source is `dlls/winemac.drv/cocoa_app.m`,
 `-[WineApplicationController setCursorPosition:]`, in Wine 10.0.
 
-**Not included and never redistributed:** Steam, Team Fortress 2 and any Valve content (art, fonts, game files).
-The launcher loads TF2 art and fonts at runtime from the user's own installation.
+**Agent skill:** `.agents/skills/axiom-graphics` is from [Axiom](https://github.com/CharlesWiltgen/Axiom)
+(MIT License, Copyright (c) 2025 Charles Wiltgen), used as a development aid; it is not part of the app.
+
+**Not included and never redistributed:** Steam, Counter-Strike: Source, Team Fortress 2 and any Valve content (art,
+fonts, game files). The launcher loads CS:S library art at runtime from the user's own installation.
