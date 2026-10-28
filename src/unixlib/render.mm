@@ -23,6 +23,7 @@
 #include <cstring>
 #include <string>
 #include <unordered_map>
+#include <set>
 #include <condition_variable>
 #include <deque>
 #include <thread>
@@ -114,6 +115,23 @@ void log_once(const char *key, const char *fmt, ...)
     char b[512];
     va_list ap; va_start(ap, fmt); vsnprintf(b, sizeof b, fmt, ap); va_end(ap);
     tf2mt_log("%s\n", b);
+}
+
+// A pixel shader samples s# as one texture type and the game bound another (D3D9 leaves that undefined; the draw gets
+// a dummy texture). Logged once per (shader, stage) with the bound texture, up to 32 cases; with TF2MT_DUMP_DIR set the
+// shader's MSL is written there as <hash>.metal. CS:S maps that ship a 2D texture as their env map hit this on stage 8
+// (the dummy is black: no reflection; DXVK renders those maps the same way).
+void texture_mismatch(const Shader &ps, uint32_t stage, uint32_t want, uint32_t have, const Obj &t)
+{
+    static std::set<std::pair<uint64_t, uint32_t>> seen;
+    if (seen.size() >= 32 || !seen.insert({ps.hash, stage}).second) return;
+    tf2mt_log("texture type mismatch: ps %016llx stage %u wants %u, bound %u (%ux%ux%u fmt 0x%x levels %u usage 0x%x): dummy bound\n",
+              (unsigned long long)ps.hash, stage, want, have, t.width, t.height, t.depth, t.fmt ? t.fmt->d3d : 0, t.levels, t.usage);
+    if (const char *dir = getenv("TF2MT_DUMP_DIR")) {
+        char path[1024];
+        snprintf(path, sizeof path, "%s/%016llx.metal", dir, (unsigned long long)ps.hash);
+        if (FILE *f = fopen(path, "w")) { fputs(ps.out.source.c_str(), f); fclose(f); }
+    }
 }
 
 double ms_now()
@@ -932,7 +950,7 @@ void draw(bool indexed, const uint32_t *p)
         if (to && to->kind == K_TEXTURE && to->tex && !to->fmt->depth) {
             uint32_t have = to->type == TF2MT_TEX_CUBE ? sm::TT_CUBE : to->type == TF2MT_TEX_3D ? sm::TT_VOLUME : sm::TT_2D;
             if (have == want) t = sampling_view(*to, S.ss[s][SS_SRGBTEXTURE] != 0);
-            else log_once("textype", "texture type mismatch on stage %u (shader %u, bound %u): dummy bound", s, want, have);
+            else texture_mismatch(*ps, s, want, have, *to);
         }
         if (!t) t = want == sm::TT_CUBE ? g_dummycube : want == sm::TT_VOLUME ? g_dummy3d : g_dummy2d;
         if (g_ec.tex[s] != t) { [enc setFragmentTexture:t atIndex:s]; g_ec.tex[s] = t; }

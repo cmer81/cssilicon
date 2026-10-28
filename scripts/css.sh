@@ -90,9 +90,6 @@ case " $* " in
      elif [ ${#cur[@]} = 3 ]; then game_args+=(-w "${cur[0]}" -h "${cur[1]}"); fi ;;
 esac
 [ ${#cur[@]} = 3 ] && game_args+=(-refresh "${cur[2]}")
-# Metal renderer: color correction comes out blue (the renderer binds a dummy texture where the shader samples a cube
-# and the game bound a 2D one), so it is turned off for the session. It is an archived cvar: it stays off afterwards.
-[ "$renderer" = tf2mt ] && game_args+=(+mat_colorcorrection 0)
 [ "${CSS_DRY_RUN:-0}" = 1 ] && { echo "game: ${game_args[*]} $*"; exit 0; }   # tests
 
 # Steam overlay (launcher setting, CSS_STEAM_OVERLAY=1, DXVK only): Steam only injects its overlay into games it starts

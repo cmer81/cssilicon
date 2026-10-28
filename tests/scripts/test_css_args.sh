@@ -27,10 +27,11 @@ test_without_display_tool() {
   hasnt "$out" "-refresh" "no tool: the game decides"
   hasnt "$out" "-w " "no tool: the game decides"
 }
-test_metal_renderer_turns_color_correction_off() {
+test_metal_renderer_keeps_color_correction() {
   tmp_home; . scripts/_env.sh; mkdir -p "$CSSDIR" "$CSS_HOME/wine/lib/wine/x86_64-windows" "$CSS_HOME/wine/lib/wine/x86_64-unix" \
     "$WINEPREFIX/drive_c/windows/system32"
   out=$(CSS_RENDERER=tf2mt CSS_DISPLAYMODE=/nonexistent CSS_DRY_RUN=1 CSS_TUNED=0 bash scripts/css.sh 2>/dev/null | grep '^game:')
-  # the renderer binds a dummy texture for color correction's lookup (2D bound where the shader wants a cube): blue image
-  has "$out" "+mat_colorcorrection 0" "Metal renderer args"
+  # the blue image on ze_ffxii_mt_bur_snow_v6fix5 is the map's own colour grading (same on DXVK, 2026-10-28): the
+  # Metal renderer must not turn colour correction off
+  hasnt "$out" "mat_colorcorrection" "Metal renderer args"
 }
