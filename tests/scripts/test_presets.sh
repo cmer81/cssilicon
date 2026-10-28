@@ -51,3 +51,27 @@ test_none_restores_file_without_trailing_newline() {
   presets set low >/dev/null; presets set none >/dev/null
   assert_file_eq "$TEST_TMP/orig" "$AE"
 }
+# `presets.sh conflicts <preset>`: cvars the preset would replace in the player's config.cfg (the game reads config.cfg
+# before autoexec.cfg, so preset values win over it); one name per line, nothing when there is no conflict
+test_conflicts_lists_changed_cvars() {
+  setup_game; printf 'bind "f4" "kill"\nfps_max "144"\nrate "786432"\ncl_interp_ratio "1"\n' > "$CSSDIR/cstrike/cfg/config.cfg"
+  assert_eq "cl_interp_ratio fps_max" "$(presets conflicts balanced | sort | tr '\n' ' ' | sed 's/ $//')" "changed values only (rate is the same)"
+}
+test_conflicts_ignores_cvars_set_in_autoexec() {
+  setup_game; printf 'fps_max "144"\n' > "$CSSDIR/cstrike/cfg/config.cfg"; echo 'fps_max 144' > "$AE"
+  assert_eq "" "$(presets conflicts balanced)" "the player's autoexec runs after the preset and wins"
+}
+test_conflicts_none_without_config() {
+  setup_game
+  assert_eq "" "$(presets conflicts high)" "fresh install: nothing to replace"
+}
+test_conflicts_numeric_equal() {
+  setup_game; printf 'mat_forceaniso "4.000000"\n' > "$CSSDIR/cstrike/cfg/config.cfg"
+  assert_eq "" "$(presets conflicts balanced)" "4.000000 equals 4"
+}
+test_conflicts_ignores_values_from_current_preset() {
+  # the game writes the running preset's values back into config.cfg on exit: they aren't the player's settings
+  setup_game; presets set balanced >/dev/null
+  printf 'mat_forceaniso "4"\nfps_max "144"\n' > "$CSSDIR/cstrike/cfg/config.cfg"
+  assert_eq "fps_max" "$(presets conflicts low)" "aniso 4 came from Balanced; fps_max 144 is the player's"
+}

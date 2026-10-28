@@ -129,6 +129,34 @@ tool.
 </details>
 
 <details>
+<summary><b>I have my own configs, HUD, weapon skins or sounds. Where do they go?</b></summary>
+
+Exactly where they go on Windows. The **Configs** tab has buttons that open the two folders in Finder:
+
+| What | Folder |
+|---|---|
+| `autoexec.cfg`, `config.cfg`, other `.cfg` files | `cstrike/cfg` (**Configs folder**) |
+| HUDs, weapon models and skins, sounds, crosshairs, mods | `cstrike/custom/<any name>/` (**Custom folder**) |
+
+The full path is `~/Games/css/prefix/drive_c/Program Files (x86)/Steam/steamapps/common/Counter-Strike Source/cstrike`.
+
+How your configs and the graphics presets get along:
+
+- A preset adds one line at the top of your `autoexec.cfg` (`exec cssmt_preset // cssmt`) and nothing else. The preset
+  runs first, then your own lines, so **your `autoexec.cfg` always wins**.
+- The game reads `config.cfg` *before* `autoexec.cfg`. If you pick a preset that would replace values from your
+  `config.cfg` (your `fps_max`, `rate`, video settings…), the launcher lists them and asks before switching.
+- Choose **None (own config)** to use only your own files: the preset line and folder are removed and your
+  `autoexec.cfg` is left exactly as it was.
+- To run another config at every start, add `+exec myconfig` to **Extra launch options**.
+- If you copy your configs in before the first launch, the Balanced preset isn't installed at all.
+
+CSSilicon only reads `config.cfg` and `autoexec.cfg` on your Mac, to compare them with the presets. It never copies,
+logs or uploads them, so passwords in them (a server's `rcon_password`, a SourceMod admin `setinfo` password) stay on
+your Mac.
+</details>
+
+<details>
 <summary><b>Does it work on Intel Macs?</b></summary>
 
 No. CSSilicon targets Apple Silicon only.

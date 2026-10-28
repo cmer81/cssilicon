@@ -3,6 +3,7 @@
 #   scripts/presets.sh status         -> "preset=<low|balanced|high|none> own=<yes|no> pending=<yes|no>"
 #   scripts/presets.sh set <preset>   -> low | balanced | high | none
 #   scripts/presets.sh auto           -> before each launch: installs Balanced on a brand-new install only
+#   scripts/presets.sh conflicts <p>  -> cvars preset <p> would replace in the player's config.cfg (the launcher asks first)
 # A preset is config/presets/<name>.cfg, copied to cstrike/custom/cssmt/cfg/cssmt_preset.cfg (first line
 # "// cssmt preset: <name>") and run by one line at the top of cstrike/cfg/autoexec.cfg, so the player's own lines run
 # after it and win. The player's lines are never touched; `set none` takes our line out again and leaves the file as it was (deleted if we
@@ -51,9 +52,28 @@ set_preset() {   # $1 = low | balanced | high | none
   add_line; echo "preset: $1"
 }
 
+# cvars of preset $1 whose value differs in the player's config.cfg and that their autoexec.cfg doesn't set itself: the
+# preset would replace them at every launch (config.cfg runs before autoexec.cfg). Values equal to the installed preset's
+# are ours (the game writes them back into config.cfg on exit), not the player's. One name per line.
+conflicts() {
+  local src="$CSSMT_ROOT/config/presets/$1.cfg"
+  [ -f "$src" ] || { echo "unknown preset $1 (low | balanced | high)" >&2; exit 2; }
+  [ -f "$CFG/config.cfg" ] || return 0
+  awk '
+    function val(s) { gsub(/"/, "", s); return s }
+    function same(a, b) { return (a == b) || (a ~ /^-?[0-9.]+$/ && b ~ /^-?[0-9.]+$/ && a + 0 == b + 0) }
+    FILENAME == ARGV[1] { if ($1 !~ /^\/\// && NF >= 2) want[$1] = val($2); next }
+    FILENAME == ARGV[2] { if (NF >= 1) own[$1] = 1; next }
+    FILENAME == ARGV[3] { if ($1 !~ /^\/\// && NF >= 2) ours[$1] = val($2); next }
+    ($1 in want) && !($1 in own) && NF >= 2 && !same(val($2), want[$1]) && !(($1 in ours) && same(val($2), ours[$1])) { print $1 }
+  ' "$src" "${AE_FOR_CONFLICTS:-$AE}" "${PRESET_FOR_CONFLICTS:-$PRESET}" "$CFG/config.cfg"
+}
+
 case "${1:-status}" in
   status) echo "preset=$(current) own=$(own) pending=$(pending)" ;;
   set)    [ $# = 2 ] || { echo "usage: $0 set low|balanced|high|none"; exit 2; }; set_preset "$2" ;;
+  conflicts) [ $# = 2 ] || { echo "usage: $0 conflicts low|balanced|high"; exit 2; }
+          [ -f "$AE" ] || AE_FOR_CONFLICTS=/dev/null; [ -f "$PRESET" ] || PRESET_FOR_CONFLICTS=/dev/null; conflicts "$2" ;;
   auto)   if [ "$(pending)" = yes ]; then set_preset balanced; else mkdir -p "$CONF"; touch "$DONE"; fi ;;
   *)      echo "usage: $0 status | set <preset> | auto"; exit 2 ;;
 esac

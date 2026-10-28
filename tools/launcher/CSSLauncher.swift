@@ -372,6 +372,12 @@ final class Launcher: ObservableObject {
 
     func setPreset(_ name: String) {
         guard name != preset || (name == "none" && presetPending) else { return }
+        // the player's own config.cfg values that this preset would replace at every launch: ask first
+        if name != "none" {
+            let out = shell(["/bin/bash", Paths.script("presets.sh"), "conflicts", name], env: scriptEnv()).output
+            let replaced = out.split(separator: "\n").map(String.init).filter { !$0.isEmpty && !$0.contains(" ") }
+            if !replaced.isEmpty && !confirmReplace(replaced, preset: name) { refreshPreset(); return }
+        }
         preset = name; presetPending = false
         message = name == "none" ? "Turning the CSSilicon preset off…" : "Switching to \(name.capitalized)…"
         Task.detached {
@@ -384,6 +390,18 @@ final class Launcher: ObservableObject {
                 self.refreshPreset()
             }
         }
+    }
+
+    /// The preset runs from autoexec.cfg, after the game's config.cfg, so it wins over the player's values there.
+    private func confirmReplace(_ cvars: [String], preset name: String) -> Bool {
+        let alert = NSAlert()
+        alert.messageText = "\(name.capitalized) will replace some of your settings"
+        let shown = cvars.prefix(8).joined(separator: ", ") + (cvars.count > 8 ? " and \(cvars.count - 8) more" : "")
+        alert.informativeText = "Your config.cfg sets \(shown) differently. The preset replaces them every time the game starts.\n\n"
+            + "To keep yours, put them in autoexec.cfg (it runs after the preset and wins), or choose None to use only your own configs."
+        alert.addButton(withTitle: "Use \(name.capitalized)")
+        alert.addButton(withTitle: "Cancel")
+        return alert.runModal() == .alertFirstButtonReturn
     }
 
     func refreshMouseFix() {
