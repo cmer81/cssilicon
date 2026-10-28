@@ -79,6 +79,10 @@ apply_mic() {
 
 # game window: 2560x1440 by default (the M1 can't drive the 5K backing store at 120 fps)
 game_args=(-novid -nojoy -nosteamcontroller -nohltv -w "${CSS_WIDTH:-2560}" -h "${CSS_HEIGHT:-1440}")
+# fullscreen takes the first mode of the requested size, which is the 60 Hz one under the Metal renderer (modes are
+# listed by rising refresh rate): ask for the rate scripts/play.sh switched the display to
+[ "${CSS_DISPLAY_120:-1}" = 1 ] && game_args+=(-refresh 120)
+[ "${CSS_DRY_RUN:-0}" = 1 ] && { echo "game: ${game_args[*]} $*"; exit 0; }   # tests
 
 # Steam overlay (launcher setting, CSS_STEAM_OVERLAY=1, DXVK only): Steam only injects its overlay into games it starts
 # itself, and the in-game store needs the overlay to confirm purchases. The game then inherits Steam's environment
