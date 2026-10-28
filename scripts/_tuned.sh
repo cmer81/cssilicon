@@ -1,5 +1,5 @@
 # Tuned defaults for normal play (docs/phase0-report.md §4, docs/loadout-stall.md).
-# Sourced by steam.sh and tf2.sh, so games started from the Steam UI inherit it too.
+# Sourced by steam.sh and css.sh, so games started from the Steam UI inherit it too.
 # Opt out with CSS_TUNED=0 (scripts/bench.sh does this so stock-DXVK baselines stay stock).
 #  - DXVK async pipeline compile + state cache (fewer compile hitches) + tearFree (vsync, 3 buffers).
 # Deliberately NOT set: WINEMSYNC (costs ~20% fps: 272 -> 216 in the demo, and does NOT fix the loadout

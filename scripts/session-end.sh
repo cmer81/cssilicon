@@ -1,5 +1,5 @@
 #!/bin/bash
-# End the tf2mt session cleanly: Friends back online (if tf2.sh set them offline), Steam shut down, wineserver
+# End the cssmt session cleanly: Friends back online (if css.sh set them offline), Steam shut down, wineserver
 # stopped, orphans swept, Metal renderer layer removed. Idempotent and locked: safe to run from several places.
 . "$(dirname "$0")/_env.sh"
 RUN="$CSS_HOME/run"; mkdir -p "$RUN"; LOG="$CSS_HOME/logs/session.log"; mkdir -p "$CSS_HOME/logs"
@@ -11,7 +11,7 @@ if ! mkdir "$LOCK" 2>/dev/null; then
   rm -rf "$LOCK"; mkdir "$LOCK" || exit 0
 fi
 echo $$ > "$LOCK/pid"; trap 'rm -rf "$LOCK"' EXIT
-if css_running; then log "TF2 is running: nothing to do"; exit 0; fi
+if css_running; then log "the game is running: nothing to do"; exit 0; fi
 server_up() { pgrep -f "$CSS_HOME/wine/.*wineserver" >/dev/null; }
 log "start (steam running: $(steam_running && echo yes || echo no))"
 if [ -f "$RUN/friends-offline" ]; then

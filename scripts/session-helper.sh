@@ -1,8 +1,8 @@
 #!/bin/bash
 # Per-session helper started by the launcher (never installed anywhere; exits when the session ends).
 # Ends the session (scripts/session-end.sh) when:
-#   * TF2 ran and has exited (whatever closed it: in-game quit, Dock, crash), or
-#   * TF2 never started, no launch is in progress and the launcher is gone (e.g. only Steam was opened).
+#   * the game ran and has exited (whatever closed it: in-game quit, Dock, crash), or
+#   * the game never started, no launch is in progress and the launcher is gone (e.g. only Steam was opened).
 # Independent of the launcher: survives the launcher being quit or force-quit. One helper at a time.
 #   session-helper.sh --spawn   start a helper in the background unless one is already running (returns at once)
 . "$(dirname "$0")/_env.sh"
@@ -31,7 +31,7 @@ end_session() {   # $1 = reason. Afterwards keep watching if a new launch alread
 while :; do
   sleep 1
   if css_running; then seen=1; quiet=0; gone=0; continue; fi
-  if alive "$RUN/launch-pending"; then quiet=0; gone=0; continue; fi       # play.sh is starting Steam/TF2
+  if alive "$RUN/launch-pending"; then quiet=0; gone=0; continue; fi       # play.sh is starting Steam/the game
   if ! server_up; then
     # nothing of ours runs (Steam not started yet, or the session already ended): give a just-requested Steam
     # start a moment to appear, then sweep leftovers and stop
@@ -40,11 +40,11 @@ while :; do
   fi
   quiet=$((quiet + 1))
   if [ $seen = 1 ]; then
-    [ $quiet -ge 3 ] || continue                                          # TF2 gone for 3 s (not a restart)
-    end_session "TF2 exited"; continue
+    [ $quiet -ge 3 ] || continue                                          # the game gone for 3 s (not a restart)
+    end_session "the game exited"; continue
   fi
   if alive "$RUN/launcher.pid"; then gone=0; continue; fi
   gone=$((gone + 1))
-  [ $gone -ge 10 ] || continue                                            # launcher closed for 10 s, no TF2, no launch
-  end_session "launcher closed without TF2 running"
+  [ $gone -ge 10 ] || continue                                            # launcher closed for 10 s, no game, no launch
+  end_session "launcher closed without the game running"
 done

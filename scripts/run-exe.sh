@@ -1,5 +1,5 @@
 #!/bin/bash
-# Run a Windows program in TF2's Wine prefix (same runtime and environment as the game): scripts/run-exe.sh <file.exe> [args…]
+# Run a Windows program in the cssmt Wine prefix (same runtime and environment as the game): scripts/run-exe.sh <file.exe> [args…]
 # Launcher: Debug → "Load .exe…". Output goes to logs/run-exe.log.
 . "$(dirname "$0")/_env.sh"; . "$(dirname "$0")/_tuned.sh"
 exe=${1:?usage: run-exe.sh <file.exe> [args…]}; shift

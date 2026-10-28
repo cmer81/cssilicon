@@ -1,6 +1,6 @@
 #!/bin/bash
 # Install the tf2mt renderer (ADR-002): tf2mt.dll + tf2mt.so as a new Wine builtin pair in the runtime, and a
-# d3d9.dll forwarder beside tf_win64.exe. Wine's own d3d9 and DXVK are not modified. Undo: layer-uninstall.sh
+# d3d9.dll forwarder beside the game exe. Wine's own d3d9 and DXVK are not modified. Undo: layer-uninstall.sh
 set -eu
 . "$(dirname "$0")/_env.sh"
 B="$CSSMT_ROOT/build/tf2mt"

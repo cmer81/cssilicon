@@ -1,11 +1,11 @@
 #!/bin/bash
-# One benchmark run = one fresh TF2 process (PLAN.md F12) playing tf/bench.dem in real time.
+# One benchmark run = one fresh CS:S process (upstream PLAN.md F12) playing cstrike/bench.dem in real time.
 #   scripts/bench.sh <tag> <ref> [extra launch args...]
 #   <ref>: dxvk  (runtime DXVK 2.4.1 behind the timing proxy)
 #          null  (build/null/d3d9.dll behind the timing proxy: game-only ceiling)
 #          tf2mt (the tf2mt renderer behind the timing proxy; layer installed for the run, removed afterwards)
 # Env passthrough: anything exported (DXVK_*, MVK_*, WINE*) reaches the game.
-# Output: ~/Games/tf2/logs/runs/<tag>/{frames-<tag>.csv,.info.txt,threads-<tag>.csv,console.log,args.txt,report.txt,report.json}
+# Output: ~/Games/css/logs/runs/<tag>/{frames-<tag>.csv,.info.txt,threads-<tag>.csv,console.log,args.txt,report.txt,report.json}
 # Validity: the display must be awake and the session unlocked for the whole run (a sleeping/locked
 # screen stops composition and changes Present behaviour). The run is refused up front, the display is
 # kept awake with caffeinate, and a run whose display state changed is marked INVALID.
@@ -38,23 +38,23 @@ cp "$CSSMT_ROOT/build/trace/d3d9.dll" "$CSSDIR/d3d9.dll"
 cp "$src" "$CSSDIR/d3d9_ref.dll"
 cp "$CSS_HOME/wine/share/dxvk/x86_64-windows/d3d9.dll" "$CSSDIR/d3d9_oracle.dll"  # null renderer asks DXVK for caps
 
-pkill -f 'Team Fortress 2.tf_win64' 2>/dev/null
-while pgrep -f 'Team Fortress 2.tf_win64' >/dev/null; do sleep 1; done
-# Steam must be logged on, otherwise TF2 runs -insecure and crashes during load
+for p in $(css_pids); do kill "$p" 2>/dev/null; done
+while css_running; do sleep 1; done
+# Steam must be logged on, otherwise the game runs -insecure and crashes during load
 pgrep -f steamwebhelper >/dev/null || { "$CSSMT_ROOT/scripts/steam.sh"; }
 until tail -n 30 "$STEAM_DIR/logs/connection_log.txt" 2>/dev/null | grep -q 'Logged On'; do sleep 2; done
 
-: > "$CSSDIR/tf/console.log"
-args=(-insecure -condebug -windowed -noborder -w 1920 -h 1080 "$@" +demo_quitafterplayback 1 +playdemo bench)
+: > "$CSSDIR/$CSS_GAME/console.log"
+args=(-insecure -condebug -windowed -noborder "$@" +demo_quitafterplayback 1 +playdemo bench)
 printf '%s\n' "ref=$ref" "args=${args[*]}" > "$run/args.txt"
 env | grep -E '^(DXVK_|MVK_|WINE[A-Z]*SYNC|TF2MT_)' >> "$run/args.txt"
 echo "display_start=$state" >> "$run/args.txt"
 echo "wine_session_sync=$(cat "$CSS_HOME/cache/wine-session-sync" 2>/dev/null || echo unknown)" >> "$run/args.txt"
 export TF2MT_TAG=$tag TF2MT_TRACE_DIR="Z:${run//\//\\}"
-"$CSSMT_ROOT/scripts/tf2.sh" "${args[@]}" >/dev/null
+"$CSSMT_ROOT/scripts/css.sh" "${args[@]}" >/dev/null
 
-for _ in $(seq 120); do pid=$(pgrep -f 'Team Fortress 2.tf_win64' | head -1); [ -n "$pid" ] && break; sleep 1; done
-[ -z "${pid:-}" ] && { echo "tf_win64 did not start"; exit 1; }
+for _ in $(seq 120); do pid=$(css_pids | head -1); [ -n "$pid" ] && break; sleep 1; done
+[ -z "${pid:-}" ] && { echo "$CSS_EXE did not start"; exit 1; }
 "$CSSMT_ROOT/build/tools/threadmon" "$pid" 1000 "$run/threads-$tag.csv" &
 deadline=$((SECONDS + 900))
 while kill -0 "$pid" 2>/dev/null; do
@@ -66,5 +66,5 @@ wait "$!" 2>/dev/null
 if [ -n "${display_bad:-}" ]; then
   echo "INVALID: display slept or screen locked during the run" | tee "$run/INVALID"
 fi
-cp "$CSSDIR/tf/console.log" "$run/console.log"
+cp "$CSSDIR/$CSS_GAME/console.log" "$run/console.log"
 "$CSSMT_ROOT/.venv/bin/python" "$CSSMT_ROOT/tools/bench/analyze.py" "$run" "$tag" --json "$run/report.json" | tee "$run/report.txt"

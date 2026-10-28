@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Minimal Source RCON client for the local TF2 listen server (launched with -usercon).
+"""Minimal Source RCON client for the local CS:S listen server (launched with -usercon).
 
-Usage: rcon.py [--port 27015] [--password tf2mt] <command> [<command> ...]
+Usage: rcon.py [--port 27015] [--password cssmt] <command> [<command> ...]
 Each command is sent separately; responses are printed.
 """
 import argparse, socket, struct, sys
@@ -31,7 +31,7 @@ def recv_exact(s, n):
     return buf
 
 
-def run(commands, port=27015, password='tf2mt', timeout=5.0):
+def run(commands, port=27015, password='cssmt', timeout=5.0):
     s = socket.create_connection(('127.0.0.1', port), timeout=timeout)
     s.sendall(packet(1, AUTH, password))
     while True:  # server sends an empty RESPONSE then the AUTH_RESPONSE
@@ -58,7 +58,7 @@ def run(commands, port=27015, password='tf2mt', timeout=5.0):
 if __name__ == '__main__':
     ap = argparse.ArgumentParser()
     ap.add_argument('--port', type=int, default=27015)
-    ap.add_argument('--password', default='tf2mt')
+    ap.add_argument('--password', default='cssmt')
     ap.add_argument('commands', nargs='+')
     a = ap.parse_args()
     for r in run(a.commands, a.port, a.password):

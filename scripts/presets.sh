@@ -1,5 +1,5 @@
 #!/bin/bash
-# cssmt graphics presets for CS:S (replaces tf2mt's mastercomfig, which only exists for TF2). Used by the launcher.
+# cssmt graphics presets for CS:S (upstream used a TF2-only preset pack). Used by the launcher.
 #   scripts/presets.sh status         -> "preset=<low|balanced|high|none> own=<yes|no> pending=<yes|no>"
 #   scripts/presets.sh set <preset>   -> low | balanced | high | none
 #   scripts/presets.sh auto           -> before each launch: installs Balanced on a brand-new install only
