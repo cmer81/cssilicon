@@ -7,9 +7,11 @@ What is left after v0.1.2 (2026-10-29). Design background: `docs/superpowers/spe
 The renderer runs CS:S as is — SM2 path (`mat_dxlevel 95`), no stalls, owner-tested on de_dust2, ze_surf_luna,
 ze_simpsons, ze_ffxii_mt_bur_snow and online. It has not been validated as systematically as tf2mt did for TF2:
 
-- [ ] **CS:S census.** `src/frontend/caps_table.h` only accepts format/caps combinations TF2 asked for. Run a census
-      on CS:S (tools/census, DXVK as oracle) over several maps and merge the tables; check `unix.log` for
-      `unseen`/`unsupported` lines meanwhile.
+- [x] **CS:S census.** No table merge needed (2026-10-29). Balanced (5 owner sessions: de_dust2, ZE maps, online)
+      and High (MSAA 4x confirmed by a `ms 4` backbuffer reset, HDR 2) on de_dust2, cs_office, de_nuke, de_inferno:
+      CS:S asks the same 39 `CheckDeviceFormat` questions outside the OK table, and DXVK answered all 39 "no" to TF2
+      (`tests/golden/adapter_queries.tsv`). No depth-stencil, device-type or multisample query is unseen; 0 stalls,
+      0 upload failures. Re-check `UNSEEN` lines in `tf2mt-session.log` if a map or setting ever behaves oddly.
 - [ ] **Golden images.** SSIM against DXVK on CS:S maps (de_dust2, cs_office, de_nuke, de_inferno; water, smoke,
       flashbang, AWP scope, HDR maps), target ≥ 0.997 as in tf2mt's M6/M7.
 - [ ] **Shader corpus.** Translator corpus tests (`make test-translate`) only have TF2's corpus; build a CS:S one.

@@ -24,7 +24,10 @@ and measurements are in `docs/` (ADR-001…005, m*-reports) and `PLAN.md`. Read 
 - **Shader path.** CS:S takes the SM2 path (`mat_dxlevel 95`), like TF2. SM3 opcodes are stubs, so ask the owner
   before starting SM3 work.
 - **Caps tables.** `src/frontend/caps_table.h` comes from TF2 census runs. A combination of formats or caps that
-  CS:S asks for and TF2 never did shows up as an "unseen" or "unsupported" line in the logs.
+  CS:S asks for and TF2 never did shows up as an "unseen" or "unsupported" line in the logs. On CS:S (Balanced and
+  High, 2026-10-29) every `UNSEEN` line is a query DXVK also answered "no" to TF2: check a new one against
+  `tests/golden/adapter_queries.tsv` before touching the tables. `backbuffer … ms N` in `tf2mt-session.log` shows
+  the MSAA level actually in use.
 - **Texture-type mismatches.**
   - `texture_mismatch` logs each (shader, stage) pair once, with details of the bound texture.
   - Set `TF2MT_DUMP_DIR` to dump the shader's MSL.

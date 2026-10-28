@@ -663,6 +663,8 @@ static void make_backbuffers(dev_t *d)
                                     D3DUSAGE_RENDERTARGET, D3DPOOL_DEFAULT, pp->MultiSampleType);
     set_ref(&d->rt[0], d->backbuffer);
     if (d->autods) set_ref(&d->ds, d->autods);
+    logmsg("backbuffer %ux%u fmt 0x%x ms %u, auto depth 0x%x\n", pp->BackBufferWidth, pp->BackBufferHeight,
+           (UINT)pp->BackBufferFormat, (UINT)pp->MultiSampleType, pp->EnableAutoDepthStencil ? (UINT)pp->AutoDepthStencilFormat : 0);
 }
 
 static void attach_window(dev_t *d)
