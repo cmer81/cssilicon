@@ -1,8 +1,8 @@
-// tf2mt launcher — Team Fortress 2 tuned for Apple Silicon (native SwiftUI, built by tools/launcher/build.sh).
-// Self-contained: the tf2mt scripts/configs/patch tool are bundled in Resources/tf2mt (a dev build without them
-// falls back to ~/Code/tf2mt). No Valve content is bundled: TF2 art and fonts are loaded at runtime from the
-// user's own installation. All game work is done by the bundled shell scripts; the app passes options as
-// environment variables (TF2_HOME, DXVK_CONFIG_FILE, MTL_HUD_ENABLED, TF2_FRIENDS_ONLINE) and launch arguments.
+// cssmt launcher — Counter-Strike: Source on Apple Silicon (native SwiftUI, built by tools/launcher/build.sh).
+// A fork of tf2mt's launcher. Self-contained: the cssmt scripts/configs/patch tool are bundled in Resources/cssmt (a
+// dev build without them falls back to ~/Documents/css-osx). No Valve content is bundled: CS:S library art is loaded
+// at runtime from the user's own installation. All game work is done by the bundled shell scripts; the app passes
+// options as environment variables (CSS_HOME, DXVK_CONFIG_FILE, MTL_HUD_ENABLED, CSS_*) and launch arguments.
 import SwiftUI
 import AppKit
 import CoreText
@@ -16,10 +16,10 @@ func exists(_ path: String) -> Bool { FileManager.default.fileExists(atPath: pat
 enum Paths {
     static let home = FileManager.default.homeDirectoryForCurrentUser.path
     static var repo: String {
-        let bundled = (Bundle.main.resourcePath ?? "") + "/tf2mt"
-        return exists(bundled + "/scripts/play.sh") ? bundled : home + "/Code/tf2mt"
+        let bundled = (Bundle.main.resourcePath ?? "") + "/cssmt"
+        return exists(bundled + "/scripts/play.sh") ? bundled : home + "/Documents/css-osx"
     }
-    static var game: String { UserDefaults.standard.string(forKey: "gameHome") ?? home + "/Games/tf2" }
+    static var game: String { UserDefaults.standard.string(forKey: "gameHome") ?? home + "/Games/css" }
     static var script: (String) -> String { { repo + "/scripts/" + $0 } }
     static var mousePatch: String { repo + "/tools/wine-patches/winemac_warp_nodiscard.sh" }
     static var releaseConf: String { repo + "/config/release.conf" }
@@ -28,9 +28,9 @@ enum Paths {
     static var prefix: String { game + "/prefix" }
     static var steamDir: String { prefix + "/drive_c/Program Files (x86)/Steam" }
     static var steamExe: String { steamDir + "/steam.exe" }
-    static var tf2Dir: String { steamDir + "/steamapps/common/Team Fortress 2" }
-    static var tf2Manifest: String { steamDir + "/steamapps/appmanifest_440.acf" }
-    static var art: String { steamDir + "/appcache/librarycache/440" }
+    static var cssDir: String { steamDir + "/steamapps/common/Counter-Strike Source" }
+    static var cssManifest: String { steamDir + "/steamapps/appmanifest_240.acf" }
+    static var art: String { steamDir + "/appcache/librarycache/240" }
     static var dxvkTearFree: String { game + "/config/dxvk.conf" }
     static var dxvkImmediate: String { game + "/config/dxvk-immediate.conf" }
     static var connectionLog: String { steamDir + "/logs/connection_log.txt" }
@@ -38,7 +38,7 @@ enum Paths {
 }
 
 /// Microphones the Mac sees (CoreAudio devices with input channels), as Wine's coreaudio driver lists them: the UID is
-/// what scripts/tf2.sh hands to Wine (TF2_MIC_UID).
+/// what scripts/css.sh hands to Wine (CSS_MIC_UID).
 struct AudioInput: Identifiable, Equatable { let uid: String; let name: String; var id: String { uid } }
 
 enum AudioInputs {
@@ -87,7 +87,7 @@ enum AudioInputs {
 /// Environment for every script: the caller's environment plus the configured game folder.
 func scriptEnv(_ extra: [String: String] = [:], removing: [String] = []) -> [String: String] {
     var env = ProcessInfo.processInfo.environment
-    env["TF2_HOME"] = Paths.game
+    env["CSS_HOME"] = Paths.game
     removing.forEach { env.removeValue(forKey: $0) }
     extra.forEach { env[$0.key] = $0.value }
     return env
@@ -149,7 +149,7 @@ func spawnDetached(_ args: [String], env: [String: String]? = nil,
 @discardableResult
 func shell(_ args: [String], env: [String: String]? = nil) -> (status: Int32, output: String) {
     // Every script runs in its own session (POSIX_SPAWN_SETSID). macOS kills an app's whole process group when the
-    // app quits; without this, quitting the launcher killed Steam, Wine and TF2 abruptly and left orphaned Wine
+    // app quits; without this, quitting the launcher killed Steam, Wine and the game abruptly and left orphaned Wine
     // processes behind (v0.3.0 and older). Output (stdout + stderr) is captured as before.
     var fds: [Int32] = [0, 0]
     guard pipe(&fds) == 0 else { return (-1, "pipe failed") }
@@ -182,18 +182,11 @@ func shell(_ args: [String], env: [String: String]? = nil) -> (status: Int32, ou
     return (code, String(decoding: data, as: UTF8.self))
 }
 
-// MARK: - Valve art & fonts from the user's install (never bundled)
+// MARK: - Valve art from the user's install (never bundled)
 
 func gameArt(_ name: String) -> NSImage? {
     let path = Paths.art + "/" + name
     return exists(path) ? NSImage(contentsOfFile: path) : nil
-}
-
-func registerGameFonts() {
-    for f in ["tf2build.ttf", "tf2secondary.ttf"] {
-        let url = URL(fileURLWithPath: Paths.tf2Dir + "/tf/resource/" + f)
-        if exists(url.path) { CTFontManagerRegisterFontsForURL(url as CFURL, .process, nil) }
-    }
 }
 
 // MARK: - frame pacing
@@ -228,6 +221,7 @@ struct Pacing: Hashable, Identifiable {
     }
 }
 
+var appVersion: String { Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "dev" }
 var displayRefreshHz: Int { max(NSScreen.main?.maximumFramesPerSecond ?? 60, 30) }
 var displayName: String { NSScreen.main?.localizedName ?? "Display" }
 
@@ -246,16 +240,15 @@ struct SetupCheck: Identifiable {
 @MainActor
 final class Launcher: ObservableObject {
     @Published var steam: SteamState = .stopped
-    @Published var tf2Running = false
+    @Published var cssRunning = false
     @Published var steamWindow = false        // a Steam window is on screen (Show / Hide Steam button)
     private var steamPIDs: [pid_t] = []       // steam.exe and steamwebhelper.exe (each Wine process is its own Mac app)
     private var steamToggled = Date.distantPast   // the window takes a moment to appear/hide: keep the button's label meanwhile
     @Published var launching = false
     @Published var mouseFix: MouseFix = .unknown
-    @Published var comfigPreset = "none"       // mastercomfig preset from setup_hook.cfg ("none" = not installed)
-    @Published var comfigInstalled = false
-    @Published var comfigOwn = false           // the player has their own autoexec.cfg
-    @Published var comfigPending = false       // a brand-new install: Balanced is installed on the first launch
+    @Published var preset = "none"            // cssmt graphics preset (scripts/presets.sh status)
+    @Published var presetOwn = false          // the player has their own lines in autoexec.cfg
+    @Published var presetPending = false      // a brand-new install: Balanced is installed on the first launch
     @Published var checks: [SetupCheck] = []
     @Published var message: String?
     @Published var setupRunning = false
@@ -272,11 +265,10 @@ final class Launcher: ObservableObject {
     var everLoggedIn: Bool { ((try? String(contentsOfFile: Paths.connectionLog, encoding: .utf8)) ?? "").contains("Logged On") }
 
     init() {
-        registerGameFonts()
         Session.markLauncherRunning()
         Task.detached { Session.ensureHelper() }
         refresh()
-        refreshMouseFix(); refreshComfig()
+        refreshMouseFix(); refreshPreset()
         refreshChecks()
         refreshMics()
         timer = Timer.scheduledTimer(withTimeInterval: 2, repeats: true) { [weak self] _ in
@@ -286,14 +278,14 @@ final class Launcher: ObservableObject {
 
     func refresh() {
         Task.detached {
-            // TF2 / Steam: only processes whose argv[0] is the Windows exe (same rules as scripts/_env.sh)
+            // CS:S / Steam: only processes whose argv[0] is the Windows exe (same rules as scripts/_env.sh)
             func running(_ pattern: String, _ argv0: (Substring) -> Bool) -> Bool {
                 shell(["/usr/bin/pgrep", "-fl", pattern]).output.split(separator: "\n").contains { line in
                     let parts = line.split(separator: " ", maxSplits: 2)
                     return parts.count >= 2 && argv0(parts[1])
                 }
             }
-            let tf2 = running("tf_win64\\.exe") { $0.hasPrefix("C:") }
+            let game = running("cstrike_win64\\.exe") { $0.hasPrefix("C:") }
             // Steam's Wine processes and whether any of them has a normal window on screen. CGWindowList gives owner,
             // layer and size without the Screen Recording permission (only window titles need it).
             // (the exe path has spaces, "C:\Program Files (x86)\…": take argv[0] up to ".exe", not up to a space)
@@ -318,13 +310,13 @@ final class Launcher: ObservableObject {
                 return states.last?.contains("[Logged On") ?? false
             }()
             await MainActor.run {
-                self.tf2Running = tf2
+                self.cssRunning = game
                 self.steamPIDs = pids
                 if Date().timeIntervalSince(self.steamToggled) > 4 { self.steamWindow = shown }
                 self.steam = steamUp ? (loggedOn ? .online : .starting) : .stopped
                 // the "Starting Steam…" message comes from the button press: keep it in step with the live state
                 if self.message == "Starting Steam…" && self.steam == .online { self.message = "Steam is online." }
-                if tf2 { self.launching = false }
+                if game { self.launching = false }
             }
         }
     }
@@ -335,39 +327,35 @@ final class Launcher: ObservableObject {
         if def != micDefault { micDefault = def }
     }
 
-    func refreshComfig() {
+    func refreshPreset() {
         Task.detached {
-            let out = shell(["/bin/bash", Paths.script("mastercomfig.sh"), "status"]).output
-            var f: [String: String] = [:]   // "installed=yes preset=balanced own=no pending=no"
+            let out = shell(["/bin/bash", Paths.script("presets.sh"), "status"], env: scriptEnv()).output
+            var f: [String: String] = [:]   // "preset=balanced own=no pending=no"
             for kv in out.split(whereSeparator: \.isWhitespace) {
                 let p = kv.split(separator: "=", maxSplits: 1)
                 if p.count == 2 { f[String(p[0])] = String(p[1]) }
             }
             let fields = f
             await MainActor.run {
-                self.comfigInstalled = fields["installed"] == "yes"
-                self.comfigPreset = fields["preset"].flatMap { $0.isEmpty ? nil : $0 } ?? "none"
-                self.comfigOwn = fields["own"] == "yes"
-                self.comfigPending = fields["pending"] == "yes"
+                self.preset = fields["preset"].flatMap { $0.isEmpty ? nil : $0 } ?? "none"
+                self.presetOwn = fields["own"] == "yes"
+                self.presetPending = fields["pending"] == "yes"
             }
         }
     }
 
-    func setComfig(_ preset: String) {
-        guard preset != comfigPreset || (preset == "none" && comfigPending) else { return }
-        comfigPreset = preset; comfigPending = false
-        message = preset == "none" ? "Turning mastercomfig off…"
-            : comfigInstalled ? "Switching mastercomfig to \(preset.capitalized)…" : "Downloading mastercomfig from GitHub…"
+    func setPreset(_ name: String) {
+        guard name != preset || (name == "none" && presetPending) else { return }
+        preset = name; presetPending = false
+        message = name == "none" ? "Turning the cssmt preset off…" : "Switching to \(name.capitalized)…"
         Task.detached {
-            let r = shell(["/bin/bash", Paths.script("mastercomfig.sh"), "set", preset])
+            let r = shell(["/bin/bash", Paths.script("presets.sh"), "set", name], env: scriptEnv())
             await MainActor.run {
                 let out = r.output.trimmingCharacters(in: .whitespacesAndNewlines)
-                self.message = r.status == 0 && preset == "none"
-                    ? "mastercomfig off — your own config is used" + (self.tf2Running ? " after a TF2 restart." : " from next launch.")
-                    : r.status == 0
-                    ? "mastercomfig \(preset.capitalized) selected" + (self.tf2Running ? " — restart TF2 to apply." : " — applies on next launch.")
-                    : "mastercomfig: " + out
-                self.refreshComfig()
+                let when = self.cssRunning ? " — restart CS:S to apply." : " — applies on next launch."
+                self.message = r.status != 0 ? "Preset: " + out
+                    : name == "none" ? "Preset off — your own config is used" + when : "\(name.capitalized) selected" + when
+                self.refreshPreset()
             }
         }
     }
@@ -384,8 +372,8 @@ final class Launcher: ObservableObject {
     }
 
     func refreshChecks() {
-        let manifest = (try? String(contentsOfFile: Paths.tf2Manifest, encoding: .utf8)) ?? ""
-        let tf2Installed = manifest.range(of: #""StateFlags"\s+"4""#, options: .regularExpression) != nil
+        let manifest = (try? String(contentsOfFile: Paths.cssManifest, encoding: .utf8)) ?? ""
+        let cssInstalled = manifest.range(of: #""StateFlags"\s+"4""#, options: .regularExpression) != nil
         checks = [
             SetupCheck(id: "rosetta", title: "Rosetta 2", ok: exists(Paths.rosetta),
                        fix: "Click “Run setup” (or: softwareupdate --install-rosetta --agree-to-license)."),
@@ -397,12 +385,12 @@ final class Launcher: ObservableObject {
                        fix: "Installed by “Run setup” (official Valve installer)."),
             SetupCheck(id: "login", title: "Logged in to Steam", ok: everLoggedIn,
                        fix: "Click “Log in to Steam” and sign in once (Steam Guard as usual)."),
-            SetupCheck(id: "tf2", title: "Team Fortress 2 installed", ok: tf2Installed,
-                       fix: "Click “Install TF2” (free, ≈31 GB download in Steam)."),
-            SetupCheck(id: "config", title: "tf2mt configs", ok: exists(Paths.dxvkTearFree) && exists(Paths.dxvkImmediate),
+            SetupCheck(id: "css", title: "Counter-Strike: Source installed", ok: cssInstalled,
+                       fix: "Click “Install CS:S” (≈15 GB in Steam; you need to own the game)."),
+            SetupCheck(id: "config", title: "cssmt configs", ok: exists(Paths.dxvkTearFree) && exists(Paths.dxvkImmediate),
                        fix: "Installed by “Run setup”."),
             SetupCheck(id: "mouse", title: "Smooth mouse fix", ok: mouseFix == .applied,
-                       fix: mouseFix == .unknown ? "Needs the tf2mt runtime (patch matches that exact Wine build)."
+                       fix: mouseFix == .unknown ? "Needs the tf2mt Wine runtime (patch matches that exact Wine build)."
                                                  : "Turn on “Smooth mouse fix” in Settings or click “Run setup”."),
         ]
     }
@@ -423,8 +411,8 @@ final class Launcher: ObservableObject {
             Task { @MainActor in
                 self.setupRunning = false
                 self.message = code == 0 ? "Setup finished." : "Setup stopped — see the log above."
-                registerGameFonts(); self.artVersion += 1
-                self.refreshMouseFix(); self.refreshComfig(); self.refresh()
+                self.artVersion += 1
+                self.refreshMouseFix(); self.refreshPreset(); self.refresh()
             }
         })
         if !started { setupRunning = false; setupLog = ["FAIL couldn't start setup.sh"] }
@@ -450,10 +438,10 @@ final class Launcher: ObservableObject {
         Task.detached { SessionRunner.runSync([Paths.script("steam.sh"), "--login"], env: scriptEnv(removing: ["MTL_HUD_ENABLED"])) }
     }
 
-    func installTF2() {
+    func installCSS() {
         Session.ensureHelper()
         Task.detached {
-            let r = SessionRunner.runSync([Paths.script("install-tf2.sh")])
+            let r = SessionRunner.runSync([Paths.script("install-css.sh")])
             await MainActor.run { self.message = r.output.trimmingCharacters(in: .whitespacesAndNewlines) }
         }
     }
@@ -463,22 +451,22 @@ final class Launcher: ObservableObject {
         panel.canChooseDirectories = true
         panel.canChooseFiles = false
         panel.canCreateDirectories = true
-        panel.message = "Choose where tf2mt keeps Wine, Steam and TF2 (needs ~35 GB)"
+        panel.message = "Choose where cssmt keeps Wine, Steam and CS:S (needs ~20 GB)"
         if panel.runModal() == .OK, let url = panel.url {
             UserDefaults.standard.set(url.path, forKey: "gameHome")
-            registerGameFonts(); artVersion += 1
-            refreshMouseFix(); refreshComfig(); refresh()
+            artVersion += 1
+            refreshMouseFix(); refreshPreset(); refresh()
         }
     }
 
-    /// Debug → "Load .exe…": pick a Windows program and run it in TF2's Wine prefix (scripts/run-exe.sh).
+    /// Debug → "Load .exe…": pick a Windows program and run it in the cssmt Wine prefix (scripts/run-exe.sh).
     func loadExe() {
         let panel = NSOpenPanel()
         panel.canChooseDirectories = false
         panel.canChooseFiles = true
         panel.allowsMultipleSelection = false
         if let exe = UTType(filenameExtension: "exe") { panel.allowedContentTypes = [exe] }
-        panel.message = "Choose a Windows program to run in TF2's Wine environment"
+        panel.message = "Choose a Windows program to run in the cssmt Wine environment"
         guard panel.runModal() == .OK, let url = panel.url else { return }
         let name = url.lastPathComponent
         message = "Starting \(name)…"
@@ -500,53 +488,52 @@ final class Launcher: ObservableObject {
                 self.message = r.status == 0
                     ? (on ? "Mouse fix applied — takes effect on next launch." : "Mouse fix removed — takes effect on next launch.")
                     : "Mouse fix: " + r.output.trimmingCharacters(in: .whitespacesAndNewlines)
-                self.refreshMouseFix(); self.refreshComfig()
+                self.refreshMouseFix(); self.refreshPreset()
             }
         }
     }
 
-    func play(pacing: Pacing, hud: Bool, friendsOffline: Bool, metalRenderer: Bool, frameLog: Bool, steamOverlay: Bool, micUID: String, extraArgs: String) {
-        guard !launching, !tf2Running else { return }
+    func play(pacing: Pacing, hud: Bool, friendsOffline: Bool, metalRenderer: Bool, frameLog: Bool, steamOverlay: Bool, display120: Bool, micUID: String, extraArgs: String) {
+        guard !launching, !cssRunning else { return }
         refreshChecks()
         guard readyToPlay else { message = "Setup incomplete — see the Setup tab."; return }
         launching = true
         Session.ensureHelper()
-        message = steam == .online ? "Starting Team Fortress 2…" : "Starting Steam — waiting for login…"
-        var extra = ["DXVK_CONFIG_FILE": pacing.dxvkConfig, "TF2_FRIENDS_ONLINE": friendsOffline ? "0" : "1"]
+        message = steam == .online ? "Starting Counter-Strike: Source…" : "Starting Steam — waiting for login…"
+        var extra = ["DXVK_CONFIG_FILE": pacing.dxvkConfig, "CSS_FRIENDS_ONLINE": friendsOffline ? "0" : "1"]
         if hud { extra["MTL_HUD_ENABLED"] = "1" }
-        extra["TF2_RENDERER"] = metalRenderer ? "tf2mt" : "dxvk"
-        extra["TF2_FRAMELOG"] = frameLog ? "1" : "0"
-        extra["TF2_STEAM_OVERLAY"] = steamOverlay ? "1" : "0"
-        extra["TF2_MIC_UID"] = micUID   // empty: the Mac's default input
+        extra["CSS_RENDERER"] = metalRenderer ? "tf2mt" : "dxvk"
+        extra["CSS_FRAMELOG"] = frameLog ? "1" : "0"
+        extra["CSS_STEAM_OVERLAY"] = steamOverlay ? "1" : "0"
+        extra["CSS_DISPLAY_120"] = display120 ? "1" : "0"
+        extra["CSS_MIC_UID"] = micUID   // empty: the Mac's default input
         extra["TF2MT_VSYNC"] = pacing.raw == "vsync" ? "1" : "0"   // Metal renderer follows Frame pacing too
         let env = scriptEnv(extra, removing: hud ? [] : ["MTL_HUD_ENABLED"])
         let args = ["/bin/bash", Paths.script("play.sh")] + pacing.launchArgs + extraArgs.split(separator: " ").map(String.init)
         Task.detached {
-            // brand-new install only: mastercomfig Balanced (recommended); never reinstalls one the player removed
-            shell(["/bin/bash", Paths.script("mastercomfig.sh"), "auto"])
             try? FileManager.default.createDirectory(atPath: Paths.logs, withIntermediateDirectories: true)
             let r = SessionRunner.runSync(Array(args.dropFirst()), env: env)   // args[0] is /bin/bash
             let logURL = URL(fileURLWithPath: Paths.logs + "/launcher.log")
             if let h = try? FileHandle(forWritingTo: logURL) {
-                h.seekToEndOfFile(); h.write(Data(("=== tf2mt launcher \(Date())\n" + r.output).utf8)); try? h.close()
+                h.seekToEndOfFile(); h.write(Data(("=== cssmt launcher \(Date())\n" + r.output).utf8)); try? h.close()
             } else {
                 try? r.output.write(to: logURL, atomically: true, encoding: .utf8)
             }
             await MainActor.run {
                 self.launching = false
                 self.message = r.status == 0 ? "Have fun!" : "Launch failed — open Logs for details."
-                self.refresh(); self.refreshComfig()
+                self.refresh(); self.refreshPreset()
             }
         }
     }
 
-    func quitTF2() {
+    func quitGame() {
         Task.detached {
-            for line in shell(["/usr/bin/pgrep", "-fl", "tf_win64\\.exe"]).output.split(separator: "\n") {
+            for line in shell(["/usr/bin/pgrep", "-fl", "cstrike_win64\\.exe"]).output.split(separator: "\n") {
                 let parts = line.split(separator: " ", maxSplits: 2)
                 if parts.count >= 2, parts[1].hasPrefix("C:"), let pid = Int32(parts[0]) { kill(pid, SIGTERM) }
             }
-            await MainActor.run { self.message = "TF2 closed."; self.refresh() }
+            await MainActor.run { self.message = "CS:S closed."; self.refresh() }
         }
     }
 
@@ -564,7 +551,7 @@ final class Launcher: ObservableObject {
         Task.detached { _ = SessionRunner.runSync([Paths.script("steam.sh"), "--show"], env: scriptEnv(removing: ["MTL_HUD_ENABLED"])) }
     }
 
-    /// Hides Steam like ⌘H: only Steam's own Wine processes, so TF2 (a separate process) stays as it is. hide()'s result
+    /// Hides Steam like ⌘H: only Steam's own Wine processes, so the game (a separate process) stays as it is. hide()'s result
     /// isn't reliable (it reported failure while Steam did hide), so the button just follows the screen again after 4 s.
     /// Steam's Dock icon stays: Wine makes a process a regular app when it first shows a window and never reverts that.
     func hideSteam() {
@@ -577,9 +564,9 @@ final class Launcher: ObservableObject {
         NSWorkspace.shared.open(URL(fileURLWithPath: Paths.logs))
     }
 
-    /// The TF2 install folder in Finder (custom content goes in tf/custom).
-    func openGameFiles(_ sub: String) {   // Configs tab: tf/cfg, tf/custom
-        NSWorkspace.shared.open(URL(fileURLWithPath: Paths.tf2Dir + sub))
+    /// The CS:S install folder in Finder (custom content goes in cstrike/custom).
+    func openGameFiles(_ sub: String) {   // Configs tab: cstrike/cfg, cstrike/custom
+        NSWorkspace.shared.open(URL(fileURLWithPath: Paths.cssDir + sub))
     }
 }
 
@@ -587,8 +574,8 @@ final class Launcher: ObservableObject {
 
 // MARK: - session lifetime
 // Steam and Wine must never outlive a play session (they kept running invisibly before v0.3.1). The launcher starts
-// scripts/session-helper.sh (bundled; runs only while a session exists) before any Steam/TF2 action and on start.
-// The helper ends the session when TF2 has exited, or when the launcher is gone and no game runs: so the order or
+// scripts/session-helper.sh (bundled; runs only while a session exists) before any Steam/game action and on start.
+// The helper ends the session when the game has exited, or when the launcher is gone and no game runs: so the order or
 // way things are closed (in game, Dock, force quit, crash) doesn't matter. The launcher itself never blocks on quit.
 enum Session {
     static var runDir: String { Paths.game + "/run" }
@@ -611,15 +598,15 @@ enum Session {
     }
 }
 
-/// Runs tf2mt scripts through the invisible "tf2mt Session" app (Contents/Helpers), opened via LaunchServices.
-/// macOS 27 attributes processes to the app that started them: Steam/Wine/TF2 started by the launcher itself kept
-/// tf2mt in the Dock as "running in background" after quitting (and "Stop Running in Background" killed the game).
+/// Runs cssmt scripts through the invisible "cssmt Session" app (Contents/Helpers), opened via LaunchServices.
+/// macOS 27 attributes processes to the app that started them (upstream finding): Steam/Wine/the game started by the
+/// launcher itself kept the launcher in the Dock as "running in background" after quitting (and "Stop Running in Background" killed the game).
 /// Started by the Session app (which exits right after its script), they belong to no visible app.
 enum SessionRunner {
-    static var appPath: String { Bundle.main.bundlePath + "/Contents/Helpers/tf2mt Session.app" }
-    static var available: Bool { exists(appPath + "/Contents/MacOS/tf2mt-session") }
+    static var appPath: String { Bundle.main.bundlePath + "/Contents/Helpers/cssmt Session.app" }
+    static var available: Bool { exists(appPath + "/Contents/MacOS/cssmt-session") }
 
-    /// `bash <scriptArgs>` with the tf2mt environment. Output lines -> onOutput, exit code -> onExit (background
+    /// `bash <scriptArgs>` with the cssmt environment. Output lines -> onOutput, exit code -> onExit (background
     /// thread). Returns false if it couldn't be started.
     @discardableResult
     static func run(_ scriptArgs: [String], env: [String: String] = scriptEnv(),
@@ -632,9 +619,9 @@ enum SessionRunner {
         let out = dir + "/req-\(UUID().uuidString).log"
         FileManager.default.createFile(atPath: out, contents: nil)
         var openArgs = ["/usr/bin/open", "-n", "-g", "-j"]
-        var e = env.filter { k, _ in ["TF2", "DXVK", "MTL_", "WINE", "MVK", "DYLD"].contains { k.hasPrefix($0) } }
-        e["TF2MT_OUT"] = out
-        e["TF2_HOME"] = Paths.game
+        var e = env.filter { k, _ in ["CSS", "TF2MT", "DXVK", "MTL_", "WINE", "MVK", "DYLD"].contains { k.hasPrefix($0) } }
+        e["CSSMT_OUT"] = out
+        e["CSS_HOME"] = Paths.game
         for (k, v) in e { openArgs += ["--env", "\(k)=\(v)"] }
         openArgs += [appPath, "--args"] + scriptArgs
         guard shell(openArgs).status == 0 else { try? FileManager.default.removeItem(atPath: out); return false }
@@ -677,149 +664,10 @@ enum SessionRunner {
 final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { true }
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
-        // hand the session to the helper and quit immediately (Dock Quit, Cmd-Q, closing the window, updater)
+        // hand the session to the helper and quit immediately (Dock Quit, Cmd-Q, closing the window)
         Session.markLauncherGone()
         Session.ensureHelper()
         return .terminateNow
-    }
-}
-
-// MARK: - auto-update (GitHub releases)
-// Checks the latest GitHub release, downloads tf2mt-app.zip, verifies it against the SHA-256 digest GitHub publishes
-// for the asset, checks the unpacked bundle (identifier, version, code signature) and swaps it in place after the
-// launcher quits (old copy kept until the swap succeeds, then relaunch). Never while TF2 is running.
-// Test hooks: defaults key "updateFeedURL" overrides the API URL (file:// works); env TF2MT_UPDATE_AUTOINSTALL=1
-// installs an available update without asking (used by the updater self-test).
-
-struct UpdateError: Error { let message: String }
-struct ReleaseInfo { let tag: String; let notes: String; let page: String; let zipURL: URL; let digest: String?; let size: Int }
-
-func versionParts(_ v: String) -> [Int] {
-    // "v0.3.0", "0.3.0", "v0.2.0-4-gabc123" -> [0,3,0]
-    var core = v.hasPrefix("v") ? String(v.dropFirst()) : v
-    if let dash = core.firstIndex(of: "-") { core = String(core[..<dash]) }
-    return core.split(separator: ".").map { Int($0) ?? 0 }
-}
-func isNewer(_ a: String, than b: String) -> Bool {
-    let x = versionParts(a), y = versionParts(b)
-    for i in 0..<max(x.count, y.count) {
-        let l = i < x.count ? x[i] : 0, r = i < y.count ? y[i] : 0
-        if l != r { return l > r }
-    }
-    return false
-}
-
-enum UpdateState: Equatable {
-    case idle, checking, upToDate, available(String), downloading, installing, failed(String)
-}
-
-final class Updater: ObservableObject {
-    static let repo = "HorrorPills/tf2mt"
-    static let assetName = "tf2mt-app.zip"
-    @Published var state: UpdateState = .idle
-    @Published var latest: ReleaseInfo?
-    @Published var lastChecked: Date?
-    let current: String = (Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String) ?? "0"
-    private var timer: Timer?
-
-    var feedURL: URL {
-        if let s = UserDefaults.standard.string(forKey: "updateFeedURL"), let u = URL(string: s) { return u }
-        return URL(string: "https://api.github.com/repos/\(Updater.repo)/releases/latest")!
-    }
-
-    func startAutomaticChecks() {
-        check()
-        timer?.invalidate()
-        timer = Timer.scheduledTimer(withTimeInterval: 6 * 3600, repeats: true) { [weak self] _ in self?.check() }
-    }
-
-    func check() {
-        if state == .checking || state == .downloading || state == .installing { return }
-        state = .checking
-        var req = URLRequest(url: feedURL, cachePolicy: .reloadIgnoringLocalCacheData, timeoutInterval: 20)
-        req.setValue("application/vnd.github+json", forHTTPHeaderField: "Accept")
-        req.setValue("tf2mt-launcher/\(current)", forHTTPHeaderField: "User-Agent")
-        URLSession.shared.dataTask(with: req) { data, resp, err in
-            let result: Result<ReleaseInfo?, UpdateError> = {
-                if let err = err { return .failure(UpdateError(message: "Couldn't reach GitHub: \(err.localizedDescription)")) }
-                if let h = resp as? HTTPURLResponse, h.statusCode != 200 { return .failure(UpdateError(message: "GitHub answered HTTP \(h.statusCode).")) }
-                guard let data = data, let j = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-                      let tag = j["tag_name"] as? String else { return .failure(UpdateError(message: "Unexpected reply from GitHub.")) }
-                if (j["draft"] as? Bool) == true || (j["prerelease"] as? Bool) == true { return .success(nil) }
-                let assets = j["assets"] as? [[String: Any]] ?? []
-                guard let a = assets.first(where: { ($0["name"] as? String) == Updater.assetName }),
-                      let s = a["browser_download_url"] as? String, let u = URL(string: s) else { return .success(nil) }
-                return .success(ReleaseInfo(tag: tag, notes: j["body"] as? String ?? "", page: j["html_url"] as? String ?? "",
-                                            zipURL: u, digest: a["digest"] as? String, size: a["size"] as? Int ?? 0))
-            }()
-            DispatchQueue.main.async {
-                self.lastChecked = Date()
-                switch result {
-                case .failure(let e): self.state = .failed(e.message)
-                case .success(let r):
-                    self.latest = r
-                    if let r = r, isNewer(r.tag, than: self.current) {
-                        self.state = .available(r.tag)
-                        if ProcessInfo.processInfo.environment["TF2MT_UPDATE_AUTOINSTALL"] == "1" { self.install(tf2Running: false) }
-                    } else { self.state = .upToDate }
-                }
-            }
-        }.resume()
-    }
-
-    func install(tf2Running: Bool) {
-        guard case .available = state, let r = latest else { return }
-        if tf2Running { state = .failed("Quit TF2 before updating."); return }
-        let dest = Bundle.main.bundlePath
-        guard FileManager.default.isWritableFile(atPath: (dest as NSString).deletingLastPathComponent) else {
-            state = .failed("No permission to replace \(dest)."); return
-        }
-        guard let digest = r.digest, digest.hasPrefix("sha256:") else {
-            state = .failed("Release has no checksum; download it from GitHub instead."); return
-        }
-        state = .downloading
-        URLSession.shared.downloadTask(with: r.zipURL) { tmp, resp, err in
-            func fail(_ m: String) { DispatchQueue.main.async { self.state = .failed(m) } }
-            if let err = err { return fail("Download failed: \(err.localizedDescription)") }
-            if let h = resp as? HTTPURLResponse, h.statusCode != 200 { return fail("Download failed: HTTP \(h.statusCode).") }
-            guard let tmp = tmp else { return fail("Download failed.") }
-            let work = NSTemporaryDirectory() + "tf2mt-update-\(UUID().uuidString)"
-            let zip = work + "/" + Updater.assetName
-            do {
-                try FileManager.default.createDirectory(atPath: work, withIntermediateDirectories: true)
-                try FileManager.default.moveItem(atPath: tmp.path, toPath: zip)
-            } catch { return fail("Couldn't store the download: \(error.localizedDescription)") }
-            DispatchQueue.main.async { self.state = .installing }
-            // 1. checksum (GitHub's asset digest)
-            let sum = shell(["/usr/bin/shasum", "-a", "256", zip]).output.split(separator: " ").first.map(String.init) ?? ""
-            if "sha256:" + sum != digest { return fail("Checksum mismatch; the update was not installed.") }
-            // 2. unpack and verify the new bundle
-            if shell(["/usr/bin/ditto", "-x", "-k", zip, work + "/new"]).status != 0 { return fail("Couldn't unpack the update.") }
-            let app = work + "/new/tf2mt.app"
-            let info = NSDictionary(contentsOfFile: app + "/Contents/Info.plist")
-            guard info?["CFBundleIdentifier"] as? String == Bundle.main.bundleIdentifier,
-                  let v = info?["CFBundleShortVersionString"] as? String, versionParts(v) == versionParts(r.tag) else {
-                return fail("The downloaded app doesn't look like tf2mt \(r.tag).")
-            }
-            if shell(["/usr/bin/codesign", "--verify", "--deep", app]).status != 0 { return fail("The downloaded app's signature is broken.") }
-            shell(["/usr/bin/xattr", "-dr", "com.apple.quarantine", app])
-            // 3. swap after this process exits (keep the old copy until the move succeeded), then relaunch
-            let helper = work + "/swap.sh"
-            let script = """
-            #!/bin/bash
-            while kill -0 \(ProcessInfo.processInfo.processIdentifier) 2>/dev/null; do sleep 0.2; done
-            DEST="$1"; NEW="$2"; OLD="$DEST.previous"
-            rm -rf "$OLD"
-            if mv "$DEST" "$OLD" && mv "$NEW" "$DEST"; then rm -rf "$OLD"; else [ -d "$OLD" ] && [ ! -d "$DEST" ] && mv "$OLD" "$DEST"; fi
-            /System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister -f "$DEST" >/dev/null 2>&1
-            open "$DEST"
-            rm -rf "\(work)"
-            """
-            do { try script.write(toFile: helper, atomically: true, encoding: .utf8) } catch { return fail("Couldn't prepare the update.") }
-            // own session: macOS kills the launcher's process group when it quits, which would take the swap with it
-            if !spawnDetached(["/bin/bash", helper, dest, app]) { return fail("Couldn't start the update helper.") }
-            DispatchQueue.main.async { NSApp.terminate(nil) }
-        }.resume()
     }
 }
 
@@ -834,9 +682,9 @@ extension Color {
 }
 
 extension Font {
-    // TF2's fonts when the game is installed (registered at runtime); SwiftUI falls back to the system font otherwise
-    static func build(_ size: CGFloat) -> Font { .custom("TF2Build", size: size) }
-    static func secondary(_ size: CGFloat) -> Font { .custom("TF2Secondary", size: size) }
+    // headings and body text (CS:S ships only icon fonts, so the system font is used)
+    static func build(_ size: CGFloat) -> Font { .system(size: size, weight: .heavy) }
+    static func secondary(_ size: CGFloat) -> Font { .system(size: size, weight: .medium) }
 }
 
 struct Card<Content: View>: View {
@@ -944,14 +792,13 @@ enum Tab: String, CaseIterable { case game = "Game", configs = "Configs", setup 
 
 struct ContentView: View {
     @StateObject private var launcher = Launcher()
-    @StateObject private var updater = Updater()
-    @AppStorage("autoUpdateCheck") private var autoUpdateCheck = true
     @AppStorage("pacing") private var pacingRaw = Pacing.vsync.raw
     @AppStorage("metalHUD") private var metalHUD = false
-    @AppStorage("friendsOffline") private var friendsOffline = true
-    @AppStorage("metalRenderer") private var metalRenderer = true
+    @AppStorage("friendsOffline") private var friendsOffline = false
+    @AppStorage("metalRenderer") private var metalRenderer = false   // DXVK until the Metal renderer is validated for CS:S
     @AppStorage("frameLog") private var frameLog = false
     @AppStorage("steamOverlay") private var steamOverlay = false
+    @AppStorage("display120") private var display120 = true
     @AppStorage("extraArgs") private var extraArgs = ""
     @AppStorage("micUID") private var micUID = ""     // "" = the Mac's default input
     @AppStorage("micName") private var micName = ""   // shown while the chosen mic is unplugged
@@ -993,10 +840,9 @@ struct ContentView: View {
                     VStack(spacing: 12) {
                         status
                         launchOptions
-                        updateControl
                         playButton
                         HStack(spacing: 10) {
-                            Button("Quit TF2") { launcher.quitTF2() }.disabled(!launcher.tf2Running)
+                            Button("Quit CS:S") { launcher.quitGame() }.disabled(!launcher.cssRunning)
                             if launcher.steam == .online {
                                 Button(launcher.steamWindow ? "Hide Steam" : "Show Steam") {
                                     launcher.steamWindow ? launcher.hideSteam() : launcher.showSteam()
@@ -1023,57 +869,6 @@ struct ContentView: View {
         }
         .frame(width: 980, height: 690)                       // window adds the 32 pt title-bar inset on top
         .animation(.easeInOut(duration: 0.2), value: launcher.message)
-        .onAppear { if autoUpdateCheck { updater.startAutomaticChecks() } }
-    }
-
-    /// Update offer, right above Play (a banner under Play got cut off; in the tab row it was easy to miss).
-    @ViewBuilder private var updateControl: some View {
-        switch updater.state {
-        case .available(let tag):
-            HStack(spacing: 8) {
-                Button { updater.install(tf2Running: launcher.tf2Running) } label: {
-                    Label(launcher.tf2Running ? "Quit TF2 to update to \(tag)" : "Update to \(tag)",
-                          systemImage: "arrow.down.circle.fill").lineLimit(1)
-                }
-                .buttonStyle(SmallButtonStyle(prominent: true))
-                .disabled(launcher.tf2Running)
-                if let page = updater.latest?.page, let u = URL(string: page) {
-                    Button { NSWorkspace.shared.open(u) } label: { Text("What's new").lineLimit(1) }
-                        .buttonStyle(SmallButtonStyle()).frame(width: 100)
-                }
-            }
-        case .downloading, .installing:
-            HStack(spacing: 6) {
-                ProgressView().controlSize(.small)
-                Text(updater.state == .downloading ? "Downloading update…" : "Installing update…")
-                    .font(.secondary(13)).foregroundStyle(Color.tfCream).lineLimit(1).fixedSize()
-            }
-        default: EmptyView()
-        }
-    }
-
-    private var updateStatusText: String {
-        switch updater.state {
-        case .idle: return "Installed: \(updater.current)"
-        case .checking: return "Checking…"
-        case .upToDate: return "\(updater.current) is the latest version."
-        case .available(let t): return "\(t) is available (installed: \(updater.current))."
-        case .downloading: return "Downloading…"
-        case .installing: return "Installing…"
-        case .failed(let m): return m
-        }
-    }
-
-    private var updatesSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                RowText(title: "Updates", detail: updateStatusText)
-                Button("Check now") { updater.check() }.buttonStyle(SmallButtonStyle()).frame(width: 100)
-                    .disabled(updater.state == .checking || updater.state == .downloading || updater.state == .installing)
-            }
-            OptionRow(title: "Check for updates automatically", detail: "On launch and every 6 hours; you choose when to install.",
-                      isOn: $autoUpdateCheck)
-        }
     }
 
     private var hero: some View {
@@ -1083,7 +878,7 @@ struct ContentView: View {
                     .frame(width: 980, height: 300).clipped()
                     .id(launcher.artVersion)
             } else {
-                // before TF2 is installed: a TF2-coloured backdrop instead of Valve art
+                // before CS:S is installed: a coloured backdrop instead of Valve art
                 LinearGradient(colors: [Color(red: 0.42, green: 0.20, blue: 0.13), .tfOrange.opacity(0.85), Color(red: 0.25, green: 0.30, blue: 0.36)],
                                startPoint: .topLeading, endPoint: .bottomTrailing)
                     .frame(width: 980, height: 300)
@@ -1095,15 +890,15 @@ struct ContentView: View {
                         Image(nsImage: logo).resizable().aspectRatio(contentMode: .fit).frame(height: 56)
                             .shadow(color: .black.opacity(0.6), radius: 8, y: 3)
                     } else {
-                        Text("TEAM FORTRESS 2").font(.system(size: 44, weight: .black)).foregroundStyle(Color.tfCream)
+                        Text("COUNTER-STRIKE: SOURCE").font(.system(size: 40, weight: .black)).foregroundStyle(Color.tfCream)
                             .shadow(color: .black.opacity(0.6), radius: 8, y: 3)
                     }
-                    Text("TF2MT  ·  TUNED FOR APPLE SILICON")
+                    Text("CSSMT  ·  TUNED FOR APPLE SILICON")
                         .font(.build(16)).tracking(1.5).foregroundStyle(Color.tfOrangeLight)
                         .shadow(color: .black, radius: 3)
                 }
                 Spacer()
-                Text("\(displayName)  ·  \(displayRefreshHz) Hz  ·  tf2mt \(updater.current)")
+                Text("\(displayName)  ·  \(displayRefreshHz) Hz  ·  cssmt \(appVersion)")
                     .font(.secondary(13)).foregroundStyle(Color.tfCream.opacity(0.75)).shadow(color: .black, radius: 3)
             }
             .padding(.horizontal, 28).padding(.bottom, 12)
@@ -1115,7 +910,7 @@ struct ContentView: View {
     private var gameTab: some View {
         Card(title: "") {
             OptionRow(title: "Native Metal Renderer",
-                      detail: "tf2mt's Direct3D 9 → Metal renderer instead of DXVK.",
+                      detail: "Experimental: tf2mt's Direct3D 9 → Metal renderer instead of DXVK (not validated for CS:S yet).",
                       isOn: $metalRenderer)
             Divider().overlay(Color.white.opacity(0.06))
             OptionRow(title: "Enable Steam Overlay",
@@ -1135,6 +930,10 @@ struct ContentView: View {
                 .labelsHidden().frame(width: 250)
             }
             Divider().overlay(Color.white.opacity(0.06))
+            OptionRow(title: "Switch display to 120 Hz while playing",
+                      detail: "Main display back to its own rate when the game exits.",
+                      isOn: $display120)
+            Divider().overlay(Color.white.opacity(0.06))
             OptionRow(title: "Smooth mouse fix",
                       detail: launcher.mouseFix == .unknown ? "Run Setup first."
                                                             : "Aim updates every frame, at any refresh rate.",
@@ -1142,11 +941,11 @@ struct ContentView: View {
                 .disabled(launcher.mouseFix == .unknown)
             Divider().overlay(Color.white.opacity(0.06))
             OptionRow(title: "Friends offline while playing",
-                      detail: "Avoids menu stutter. Restored on exit.",
+                      detail: "Only if menus stutter (a TF2 workaround). Restored on exit.",
                       isOn: $friendsOffline)
             Divider().overlay(Color.white.opacity(0.06))
             HStack {
-                RowText(title: "Microphone", detail: "For voice chat in TF2. Applies on next launch.")
+                RowText(title: "Microphone", detail: "For voice chat in CS:S. Applies on next launch.")
                 Picker("", selection: Binding(get: { micUID }, set: { uid in
                     micUID = uid; micName = launcher.micInputs.first { $0.uid == uid }?.name ?? ""
                 })) {
@@ -1172,61 +971,52 @@ struct ContentView: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
-    private static let presets = ["low", "balanced", "medium", "high", "ultra"]
+    private static let presets = ["low", "balanced", "high"]
 
     private var configs: some View {
         Card(title: "") {
             HStack {
-                RowText(title: "Graphics preset",
-                        detail: launcher.comfigInstalled || launcher.comfigPending ? "mastercomfig profile. Applies on next launch."
-                                                         : "None: mastercomfig is off. Applies on next launch.")
-                // brand-new install: shown as Balanced, which the first launch installs (mastercomfig.sh auto)
-                Picker("", selection: Binding(get: { launcher.comfigPreset == "none" && launcher.comfigPending ? "balanced" : launcher.comfigPreset },
-                                              set: { launcher.setComfig($0) })) {
-                    Text(launcher.comfigOwn ? "None (own config)" : "None (TF2 defaults)").tag("none")
+                RowText(title: "Graphics preset", detail: "cssmt profile in cstrike/custom/cssmt. Applies on next launch.")
+                // brand-new install: shown as Balanced, which the first launch installs (presets.sh auto)
+                Picker("", selection: Binding(get: { launcher.preset == "none" && launcher.presetPending ? "balanced" : launcher.preset },
+                                              set: { launcher.setPreset($0) })) {
+                    Text(launcher.presetOwn ? "None (own config)" : "None (game settings)").tag("none")
                     Divider()
-                    if launcher.comfigPreset != "none" && !Self.presets.contains(launcher.comfigPreset) {
-                        Text(launcher.comfigPreset.capitalized).tag(launcher.comfigPreset)
-                    }
                     ForEach(Self.presets, id: \.self) { p in
-                        Text(p == "low" ? "Low (competitive)"
-                             : p == "balanced" ? "Balanced (recommended)" : p.capitalized).tag(p)
+                        Text(p == "balanced" ? "Balanced (recommended)" : p.capitalized).tag(p)
                     }
                 }
                 .labelsHidden().frame(width: 250)
             }
             Divider().overlay(Color.white.opacity(0.06))
             HStack(alignment: .top, spacing: 12) {
-                Image(systemName: activeConfig.warn ? "exclamationmark.circle.fill" : "checkmark.circle.fill")
-                    .font(.system(size: 17)).foregroundStyle(activeConfig.warn ? Color.tfOrangeLight : Color.tfGreen)
-                    .frame(width: 22)
+                Image(systemName: "checkmark.circle.fill")
+                    .font(.system(size: 17)).foregroundStyle(Color.tfGreen).frame(width: 22)
                 RowText(title: "Active: " + activeConfig.title, detail: activeConfig.detail)
             }
             Divider().overlay(Color.white.opacity(0.06))
             HStack(spacing: 10) {
-                Button { launcher.openGameFiles("/tf/cfg") } label: { Label("Configs folder", systemImage: "folder") }
-                    .disabled(!exists(Paths.tf2Dir + "/tf/cfg"))
-                Button { launcher.openGameFiles("/tf/custom") } label: { Label("Custom folder", systemImage: "folder") }
-                    .disabled(!exists(Paths.tf2Dir + "/tf/custom"))
+                Button { launcher.openGameFiles("/cstrike/cfg") } label: { Label("Configs folder", systemImage: "folder") }
+                    .disabled(!exists(Paths.cssDir + "/cstrike/cfg"))
+                Button { launcher.openGameFiles("/cstrike/custom") } label: { Label("Custom folder", systemImage: "folder") }
+                    .disabled(!exists(Paths.cssDir + "/cstrike/custom"))
             }
             .buttonStyle(SmallButtonStyle())
-            Text("Configs: autoexec.cfg and class configs. Custom: HUDs, hitsounds and mods.")
+            Text("Configs: autoexec.cfg (your own lines stay first). Custom: HUDs, sounds and mods.")
                 .font(.system(size: 12)).foregroundStyle(Color.tfCream.opacity(0.7))
         }
-        .onAppear { launcher.refreshComfig() }   // the player may have changed files in Finder
+        .onAppear { launcher.refreshPreset() }   // the player may have changed files in Finder
     }
 
     /// What decides the game's settings, in plain words for the Configs tab.
-    private var activeConfig: (title: String, detail: String, warn: Bool) {
-        if launcher.comfigInstalled {
-            let name = "mastercomfig " + (launcher.comfigPreset == "none" ? "" : launcher.comfigPreset.capitalized)
-            return launcher.comfigOwn
-                ? (name, "It overrides your autoexec.cfg. Pick None to use yours, or move it into cfg/overrides.", true)
-                : (name, "Your own tweaks go in cfg/overrides (runs after mastercomfig).", false)
+    private var activeConfig: (title: String, detail: String) {
+        if launcher.preset != "none" {
+            return ("cssmt " + launcher.preset.capitalized,
+                    launcher.presetOwn ? "Runs after your autoexec.cfg lines." : "Your own lines go in autoexec.cfg.")
         }
-        if launcher.comfigPending { return ("mastercomfig Balanced", "Installed on first launch.", false) }
-        if launcher.comfigOwn { return ("your own config", "autoexec.cfg found, mastercomfig is off.", false) }
-        return ("TF2 defaults", "mastercomfig is off and no autoexec.cfg was found.", false)
+        if launcher.presetPending { return ("cssmt Balanced", "Installed on first launch.") }
+        if launcher.presetOwn { return ("your own config", "autoexec.cfg found, no cssmt preset.") }
+        return ("game settings", "No cssmt preset and no autoexec.cfg: the in-game Video options decide.")
     }
 
     private var debug: some View {
@@ -1235,13 +1025,13 @@ struct ContentView: View {
                       detail: "Apple's FPS and frame-time overlay.", isOn: $metalHUD)
             Divider().overlay(Color.white.opacity(0.06))
             OptionRow(title: "Record frame times (DXVK)",
-                      detail: metalRenderer ? "The Metal renderer always records." : "Logs to ~/Games/tf2/logs/dxvk/.",
+                      detail: metalRenderer ? "The Metal renderer always records." : "Logs to ~/Games/css/logs/dxvk/.",
                       isOn: $frameLog)
                 .disabled(metalRenderer)
             Divider().overlay(Color.white.opacity(0.06))
             HStack {
                 RowText(title: "Run a Windows program",
-                        detail: "Runs an .exe in TF2's Wine environment (same prefix and runtime).")
+                        detail: "Runs an .exe in the cssmt Wine environment (same prefix and runtime).")
                 Button("Load .exe…") { launcher.loadExe() }
                     .buttonStyle(SmallButtonStyle()).frame(width: 100)
                     .disabled(!exists(Paths.wine))
@@ -1251,7 +1041,7 @@ struct ContentView: View {
 
     private var setup: some View {
         Card(title: "") {
-            Text("tf2mt brings its own Wine runtime; Steam and TF2 are installed from Valve, into your own folder. Nothing from Valve is redistributed.")
+            Text("cssmt uses tf2mt's Wine runtime; Steam and CS:S are installed from Valve, into your own folder. Nothing from Valve is redistributed.")
                 .font(.system(size: 12)).foregroundStyle(Color.tfCream.opacity(0.7))
                 .fixedSize(horizontal: false, vertical: true)
             HStack(spacing: 10) {
@@ -1259,7 +1049,7 @@ struct ContentView: View {
                     .buttonStyle(SmallButtonStyle(prominent: true)).disabled(launcher.setupRunning)
                 Button("Log in to Steam") { launcher.loginSteam() }
                     .buttonStyle(SmallButtonStyle()).disabled(!exists(Paths.steamExe))
-                Button("Install TF2") { launcher.installTF2() }
+                Button("Install CS:S") { launcher.installCSS() }
                     .buttonStyle(SmallButtonStyle()).disabled(launcher.steam == .stopped)
             }
             if !launcher.setupLog.isEmpty {
@@ -1284,9 +1074,7 @@ struct ContentView: View {
                 RowText(title: "Game folder", detail: Paths.game)
                 Button("Change…") { launcher.chooseGameFolder() }.buttonStyle(SmallButtonStyle()).frame(width: 90)
             }
-            Button("Re-check") { launcher.refreshMouseFix(); launcher.refreshComfig(); launcher.refresh() }.buttonStyle(SmallButtonStyle())
-            Divider().overlay(Color.white.opacity(0.06))
-            updatesSection
+            Button("Re-check") { launcher.refreshMouseFix(); launcher.refreshPreset(); launcher.refresh() }.buttonStyle(SmallButtonStyle())
         }
     }
 
@@ -1295,21 +1083,22 @@ struct ContentView: View {
             StatusRow(label: "Steam",
                       value: launcher.steam == .online ? "Online" : launcher.steam == .starting ? "Logging in…" : "Not running",
                       color: launcher.steam == .online ? .green : launcher.steam == .starting ? .yellow : .gray)
-            StatusRow(label: "Team Fortress 2",
-                      value: launcher.tf2Running ? "Running" : launcher.launching ? "Launching…" : "Not running",
-                      color: launcher.tf2Running ? .green : launcher.launching ? .yellow : .gray)
+            StatusRow(label: "Counter-Strike: Source",
+                      value: launcher.cssRunning ? "Running" : launcher.launching ? "Launching…" : "Not running",
+                      color: launcher.cssRunning ? .green : launcher.launching ? .yellow : .gray)
         }
     }
 
     private var playButton: some View {
-        let canPlay = !launcher.tf2Running && !launcher.launching && launcher.readyToPlay
+        let canPlay = !launcher.cssRunning && !launcher.launching && launcher.readyToPlay
         return Button {
             launcher.play(pacing: Pacing(raw: pacingRaw), hud: metalHUD, friendsOffline: friendsOffline,
-                          metalRenderer: metalRenderer, frameLog: frameLog, steamOverlay: steamOverlay && !metalRenderer, micUID: micUID, extraArgs: extraArgs)
+                          metalRenderer: metalRenderer, frameLog: frameLog, steamOverlay: steamOverlay && !metalRenderer,
+                          display120: display120, micUID: micUID, extraArgs: extraArgs)
         } label: {
             HStack(spacing: 12) {
                 if launcher.launching { ProgressView().controlSize(.small).tint(.white) }
-                Text(launcher.tf2Running ? "RUNNING" : launcher.launching ? "LAUNCHING" : launcher.readyToPlay ? "PLAY" : "SET UP")
+                Text(launcher.cssRunning ? "RUNNING" : launcher.launching ? "LAUNCHING" : launcher.readyToPlay ? "PLAY" : "SET UP")
             }
         }
         .buttonStyle(PlayButtonStyle(enabled: canPlay))
@@ -1319,10 +1108,10 @@ struct ContentView: View {
 }
 
 @main
-struct TF2LauncherApp: App {
+struct CSSLauncherApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     var body: some Scene {
-        WindowGroup("tf2mt") {
+        WindowGroup("cssmt") {
             ContentView().preferredColorScheme(.dark)
         }
         .windowStyle(.hiddenTitleBar)

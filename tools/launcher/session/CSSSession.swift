@@ -1,14 +1,14 @@
-// tf2mt Session — invisible helper app inside tf2mt.app (Contents/Helpers). The launcher opens it through
-// LaunchServices (`open -n -g -j ... --args <script> [args]`) to run the scripts that start Steam/TF2/setup.
-// Processes started this way are not attributed to the launcher, so on macOS 27 quitting tf2mt really quits it:
+// cssmt Session — invisible helper app inside cssmt.app (Contents/Helpers). The launcher opens it through
+// LaunchServices (`open -n -g -j ... --args <script> [args]`) to run the scripts that start Steam/CS:S/setup.
+// Processes started this way are not attributed to the launcher, so on macOS 27 quitting cssmt really quits it:
 // no "running in background" Dock state whose "Stop Running in Background" would kill Steam and the game.
-// Output (stdout+stderr) goes to $TF2MT_OUT, the exit code to $TF2MT_OUT.status; then this app exits.
+// Output (stdout+stderr) goes to $CSSMT_OUT, the exit code to $CSSMT_OUT.status; then this app exits.
 import Foundation
 import Darwin
 
 let env = ProcessInfo.processInfo.environment
 let args = Array(CommandLine.arguments.dropFirst())
-let out = env["TF2MT_OUT"] ?? "/dev/null"
+let out = env["CSSMT_OUT"] ?? "/dev/null"
 func finish(_ code: Int32) -> Never {
     if out != "/dev/null" { try? "\(code)\n".write(toFile: out + ".status", atomically: true, encoding: .utf8) }
     exit(code)
