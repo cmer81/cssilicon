@@ -1,57 +1,183 @@
-# tf2mt — Team Fortress 2 tuned for Apple Silicon
+<!-- prettier-ignore -->
+<div align="center">
 
-<img width="1092" height="834" alt="Screenshot 2026-10-08 at 13 12 27" src="https://github.com/user-attachments/assets/a286a706-6c99-44f1-b56a-120eae0c0b9c" />
+<img src="./docs/assets/icon.png" alt="" align="center" height="96" />
 
-Play the Windows version of **Team Fortress 2** on Apple Silicon Macs, smoothly and with low input lag.
-tf2mt is a simple Mac launcher with its own Direct3D 9 → Metal renderer and a set of tested fixes for Wine.
-Works on VAC-secured servers.
+# CSSilicon
 
-## Requirements
+**Play Counter-Strike: Source on Apple Silicon Macs — smooth, VAC-safe, one click.**
 
-- Apple Silicon Mac, macOS 13 or newer
-- About 35 GB of free disk space
-- A Steam account (TF2 is free)
+![Apple Silicon](https://img.shields.io/badge/Apple_Silicon-M1_·_M2_·_M3_·_M4-black?style=flat-square&logo=apple)
+![macOS](https://img.shields.io/badge/macOS-13%2B-blue?style=flat-square)
+![Renderer](https://img.shields.io/badge/Renderer-Metal_·_DXVK-orange?style=flat-square)
+[![License](https://img.shields.io/badge/License-MIT-yellow?style=flat-square)](LICENSE)
 
-## Install
+[Overview](#overview) • [Getting started](#getting-started) • [Settings](#settings) • [How it works](#how-it-works) • [FAQ](#faq) • [Build from source](#build-from-source)
 
-1. Download **tf2mt-app.zip** from [Releases](../../releases), unzip it and move **tf2mt.app** to Applications.
-   On first launch: right-click → **Open**.
-2. In tf2mt, open the **Setup** tab and click **Run setup**.
-3. Click **Log in to Steam**, then **Install TF2**.
-4. Click **Play**.
+</div>
 
-The launcher updates itself when a new version is out.
+Valve no longer ships a playable macOS build of Counter-Strike: Source. CSSilicon runs the official **Windows** version
+of the game on your Mac — the one Steam servers expect — with a native Direct3D 9 → Metal renderer and a set of
+measured fixes for smooth aim and stutter-free play. It is a fork of [tf2mt](https://github.com/HorrorPills/tf2mt),
+which does the same for Team Fortress 2.
 
-## What it fixes
+> [!NOTE]
+> CSSilicon is a community project. It is not affiliated with or endorsed by Valve. Nothing from Valve is bundled:
+> Steam and the game are downloaded from Valve into your own folder.
 
-- **Smooth aim:** mouse movement reaches the game every frame, with less input lag.
-- **No menu stutter:** loadout and class select stay smooth.
-- **Fewer hitches and no tearing.**
-- **Clean exit:** Steam and Wine close when you quit TF2.
+## Overview
 
-## Good to know
+CSSilicon is a small macOS app. It sets up a Wine environment, installs the Windows Steam client, downloads
+Counter-Strike: Source with your own Steam account and launches it with settings that suit your Mac.
 
-- tf2mt doesn't modify TF2 or its memory. It's a Wine setup, like Proton on Steam Deck.
-- Nothing from Valve is redistributed: Steam and TF2 download from Valve.
-- Start TF2 from tf2mt, not from the Steam window, or the launcher's settings won't apply.
-- Logs: `~/Games/tf2/logs` (**Logs** button).
+### Features
 
-## Publishing a release (maintainers)
+- **Official servers and community servers**: the real Windows game, so it joins any VAC-secured server.
+- **Native Metal renderer**: Direct3D 9 is translated straight to Metal. No shader-compile hitches, and a pipeline
+  cache that makes the next sessions start warm.
+- **Adapts to your Mac**: runs at your display's own resolution and refresh rate by default; pick a lower resolution
+  or a fixed refresh rate (120 Hz, 144 Hz…) for the session, and the display is put back when you quit.
+- **Smooth mouse**: aim updates every frame (patched Wine mouse handling from tf2mt).
+- **Graphics presets** (Low, Balanced, High) that never overwrite your own `autoexec.cfg`.
+- **Clean sessions**: Steam and Wine shut down when the game exits, however it exits.
+- **Quality of life**: microphone picker, show/hide the Steam window, config folders, logs.
 
-1. `scripts/package-runtime.sh` → `build/release/tf2mt-runtime-*.tar.xz` (+ `.sha256`) — the runtime with the
-   original, unpatched `winemac.so`.
-2. Commit, then tag the release (`git tag vX.Y.Z`): the app's version comes from `git describe --tags`, and the
-   in-app updater compares it with the release tag. Then `tools/launcher/build.sh --no-install` →
-   `build/launcher/tf2mt-app.zip`.
-3. Create a GitHub release for the tag and upload the files (the runtime only when it changed). The updater only
-   offers non-draft, non-prerelease releases whose tag is newer than the installed app and that carry an asset
-   named exactly `tf2mt-app.zip`.
-4. Put the runtime's download URL and SHA-256 into `config/release.conf`, commit, and rebuild the app (step 2) so the
-   bundled setup downloads the runtime automatically.
+## Getting started
 
-## More
+### Requirements
 
-- [Current status](docs/STATUS.md) · [Renderer plan](PLAN.md)
-- [Mouse input](docs/mouse-input.md) · [Menu stutter](docs/loadout-stall.md) · [Benchmarks](docs/phase0-report.md) · [Session cleanup](docs/session-lifetime.md)
-- [Third-party licences](THIRD_PARTY.md)
-- Graphics presets by [mastercomfig](https://github.com/mastercomfig/mastercomfig)
+- A Mac with Apple Silicon (M1 or newer) and macOS 13 or later
+- About 20 GB of free disk space
+- A Steam account that owns Counter-Strike: Source
+
+### Install
+
+1. Download `CSSilicon-app.zip` from the [latest release](https://github.com/cmer81/cssilicon/releases/latest), unzip it
+   and move **CSSilicon.app** to your Applications folder.
+2. The app isn't signed by Apple: the first time, **right-click it → Open**, then confirm.
+3. In the **Setup** tab, click **Run setup**. It installs Rosetta 2 if needed, a Wine runtime (~230 MB), DXVK and the
+   Windows Steam client into `~/Games/css`.
+4. Click **Log in to Steam** and sign in once (Steam Guard works as usual).
+5. Click **Install CS:S** and let Steam download the game (about 6 GB).
+6. Click **Play**.
+
+> [!TIP]
+> Turn on **Native Metal Renderer** in the **Game** tab. It removes the hitches you get with DXVK the first time an
+> effect shows up (a spawn, a knife, the flashlight) and is usually faster.
+
+## Settings
+
+Everything lives in the launcher; you don't need the terminal.
+
+| Tab | Setting | What it does |
+|---|---|---|
+| Game | **Native Metal Renderer** | Metal renderer instead of DXVK. Experimental, off by default |
+| Game | **Resolution** | *Native* uses the display's size; lower sizes run faster on smaller GPUs |
+| Game | **Refresh rate while playing** | *Unchanged*, or a rate your display offers (e.g. 120 Hz) for the session |
+| Game | **Frame pacing** | Vsync (no tearing), uncapped, or an fps cap |
+| Game | **Smooth mouse fix** | Every mouse movement reaches the game, at any refresh rate |
+| Game | **Microphone** | Input device for voice chat |
+| Game | **Steam Overlay** | In-game store and overlay (DXVK only) |
+| Configs | **Graphics preset** | Low, Balanced (default) or High, or *None* to use only your own config |
+| Debug | **Record frame times**, **Metal HUD**, **Load .exe** | Tools to measure and troubleshoot |
+
+> [!TIP]
+> Smaller Macs are mostly limited by the GPU. On a base M1 with a 1440p display, **1920x1080** at **120 Hz** with the
+> Metal renderer and the Balanced preset is a good balance. Faster chips can keep the native resolution.
+
+Measured on a MacBook Pro M1 (8-core GPU), busy Zombie Escape server, Balanced preset:
+
+| | DXVK | Metal, 2560×1440 | Metal, 1920×1080 |
+|---|---|---|---|
+| Average fps | ~60 | 51–56 | 66–80 |
+| Shader-compile hitches | yes | none | none |
+
+## How it works
+
+```mermaid
+flowchart LR
+    A[CSSilicon.app] -->|scripts| B[Wine + Rosetta 2]
+    B --> C[Steam for Windows]
+    B --> D[cstrike_win64.exe]
+    D -->|Direct3D 9| E{Renderer}
+    E -->|default| F[DXVK → MoltenVK]
+    E -->|Native Metal Renderer| G[tf2mt d3d9 → Metal]
+    F --> H[Metal]
+    G --> H
+```
+
+- The app is a SwiftUI launcher. All the work is done by the shell scripts in [`scripts/`](scripts), which you can
+  also run from a terminal (`scripts/setup.sh`, `scripts/play.sh`).
+- The Metal renderer is a `d3d9.dll` placed next to the game for the session only, and removed when it exits. The
+  game files and its memory are never modified.
+- Your data (Wine, Steam, the game, logs and caches) lives in `~/Games/css`.
+
+## FAQ
+
+<details>
+<summary><b>Is it safe with VAC?</b></summary>
+
+CSSilicon doesn't modify the game, inject code into it or touch its memory. It works like Proton on the Steam Deck: the
+game talks to a Direct3D 9 library (DXVK or the Metal renderer), the way it would on Windows. That said, use it at your
+own risk, as with any third-party tool.
+</details>
+
+<details>
+<summary><b>Does it work on Intel Macs?</b></summary>
+
+No. CSSilicon targets Apple Silicon only.
+</details>
+
+<details>
+<summary><b>Some maps look very blue, orange or desaturated.</b></summary>
+
+That's the map's own colour grading (colour correction), and Windows shows it the same way. To turn it off for every
+map, type `mat_colorcorrection 0` in the game console.
+</details>
+
+<details>
+<summary><b>I still get a few hitches with DXVK.</b></summary>
+
+DXVK compiles a pipeline the first time it meets an effect and keeps it in a cache, so hitches fade as you play.
+Switch to the Native Metal Renderer to avoid them.
+</details>
+
+<details>
+<summary><b>Where are the logs?</b></summary>
+
+In `~/Games/css/logs` (**Logs** button in the launcher). Metal renderer sessions get their own folder under
+`logs/tf2mt`, with a frame-time file.
+</details>
+
+<details>
+<summary><b>How do I uninstall it?</b></summary>
+
+Delete **CSSilicon.app** and the `~/Games/css` folder.
+</details>
+
+## Build from source
+
+You need the Xcode Command Line Tools (`xcode-select --install`) and [Homebrew](https://brew.sh).
+
+```bash
+brew install mingw-w64
+git clone https://github.com/cmer81/cssilicon.git && cd cssilicon
+python3 -m venv .venv && .venv/bin/pip install pillow   # app icon
+tools/launcher/build.sh                                 # builds and installs /Applications/CSSilicon.app
+```
+
+Run the tests with:
+
+```bash
+make test-scripts test-display
+```
+
+Design notes and plans are in [`docs/superpowers`](docs/superpowers); the renderer's own documentation (from tf2mt)
+is in [`docs`](docs) and [`PLAN.md`](PLAN.md).
+
+## Credits
+
+- [tf2mt](https://github.com/HorrorPills/tf2mt) by HorrorPills: the Metal renderer, the Wine runtime, the mouse fix
+  and the launcher this project is built on.
+- [Wine](https://www.winehq.org), [DXVK](https://github.com/doitsujin/dxvk) and
+  [MoltenVK](https://github.com/KhronosGroup/MoltenVK). See [THIRD_PARTY.md](THIRD_PARTY.md).
