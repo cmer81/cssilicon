@@ -62,8 +62,8 @@ Counter-Strike: Source with your own Steam account and launches it with settings
 6. Click **Play**.
 
 > [!TIP]
-> Turn on **Native Metal Renderer** in the **Game** tab. It removes the hitches you get with DXVK the first time an
-> effect shows up (a spawn, a knife, the flashlight) and is usually faster.
+> The **Native Metal Renderer** is on by default: no hitches the first time an effect shows up (a spawn, a knife, the
+> flashlight), and usually more fps than DXVK. If a map looks wrong, turn it off in the **Game** tab to compare with DXVK.
 
 ## Settings
 
@@ -71,7 +71,7 @@ Everything lives in the launcher; you don't need the terminal.
 
 | Tab | Setting | What it does |
 |---|---|---|
-| Game | **Native Metal Renderer** | Metal renderer instead of DXVK. Experimental, off by default |
+| Game | **Native Metal Renderer** | Direct3D 9 → Metal (on by default). Turn it off to use DXVK |
 | Game | **Resolution** | *Native* uses the display's size; lower sizes run faster on smaller GPUs |
 | Game | **Refresh rate while playing** | *Unchanged*, or a rate your display offers (e.g. 120 Hz) for the session |
 | Game | **Frame pacing** | Vsync (no tearing), uncapped, or an fps cap |
@@ -100,8 +100,8 @@ flowchart LR
     B --> C[Steam for Windows]
     B --> D[cstrike_win64.exe]
     D -->|Direct3D 9| E{Renderer}
-    E -->|default| F[DXVK → MoltenVK]
-    E -->|Native Metal Renderer| G[tf2mt d3d9 → Metal]
+    E -->|default| G[tf2mt d3d9 → Metal]
+    E -->|option| F[DXVK → MoltenVK]
     F --> H[Metal]
     G --> H
 ```
@@ -139,7 +139,7 @@ map, type `mat_colorcorrection 0` in the game console.
 <summary><b>I still get a few hitches with DXVK.</b></summary>
 
 DXVK compiles a pipeline the first time it meets an effect and keeps it in a cache, so hitches fade as you play.
-Switch to the Native Metal Renderer to avoid them.
+The Native Metal Renderer (the default) avoids them.
 </details>
 
 <details>

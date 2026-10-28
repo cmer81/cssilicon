@@ -23,6 +23,9 @@ Ce qui change par rapport au design d'origine :
   connu à corriger dans le rendu avant de le proposer par défaut : la correction colorimétrique sort bleue (le shader
   échantillonne un cube là où le jeu lie une texture 2D, le rendu met une texture vide). Contournement actuel :
   `+mat_colorcorrection 0` quand le rendu Metal est actif.
+- **Mise à jour (2026-10-28, nuit)** : le « défaut de couleur » était l'étalonnage de la map (identique en DXVK) ;
+  contournement retiré. **Le rendu Metal est activé par défaut** dans le lanceur (DXVK reste une option, requise pour
+  l'overlay Steam).
 - Reste à décider avec le propriétaire : nom et URL du dépôt, date de publication.
 
 ## Intention

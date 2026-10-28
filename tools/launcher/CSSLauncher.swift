@@ -823,7 +823,7 @@ struct ContentView: View {
     @AppStorage("pacing") private var pacingRaw = Pacing.vsync.raw
     @AppStorage("metalHUD") private var metalHUD = false
     @AppStorage("friendsOffline") private var friendsOffline = false
-    @AppStorage("metalRenderer") private var metalRenderer = false   // DXVK until the Metal renderer is validated for CS:S
+    @AppStorage("metalRenderer") private var metalRenderer = true    // validated on CS:S maps and online (2026-10-28)
     @AppStorage("frameLog") private var frameLog = false
     @AppStorage("steamOverlay") private var steamOverlay = false
     @AppStorage("resolution") private var resolution = ""   // "" = native (the display's size), else "1920x1080"
@@ -939,7 +939,7 @@ struct ContentView: View {
     private var gameTab: some View {
         Card(title: "") {
             OptionRow(title: "Native Metal Renderer",
-                      detail: "Experimental: tf2mt's Direct3D 9 → Metal renderer instead of DXVK (not validated for CS:S yet).",
+                      detail: "Direct3D 9 → Metal: no shader-compile hitches. Turn off to use DXVK (needed for the Steam Overlay).",
                       isOn: $metalRenderer)
             Divider().overlay(Color.white.opacity(0.06))
             OptionRow(title: "Enable Steam Overlay",
