@@ -17,3 +17,18 @@ test_css_pids_ignores_shells() {
   sleep 0.3
   assert_eq "" "$(css_pids)" "a shell mentioning the exe is not the game"; kill $p
 }
+test_steam_running_with_spaces_in_path() {
+  . scripts/_env.sh
+  ( exec -a 'C:\Program Files (x86)\Steam\steam.exe -silent -no-cef-sandbox' sleep 3 ) & p=$!
+  sleep 0.3
+  steam_running; r=$?; kill $p
+  assert_eq 0 "$r" "steam.exe under Program Files (x86) is detected"
+}
+test_steam_running_ignores_webhelper() {
+  . scripts/_env.sh
+  steam_running && return 0   # a real Steam is up: this check can't be isolated
+  ( exec -a 'C:\Program Files (x86)\Steam\bin\cef\cef.win64\steamwebhelper.exe -steampath=C:\Program Files (x86)\Steam\steam.exe -launcher=0' sleep 3 ) & p=$!
+  sleep 0.3
+  steam_running; r=$?; kill $p
+  assert_eq 1 "$r" "steamwebhelper alone is not Steam"
+}

@@ -26,8 +26,9 @@ case "${WINEDLLOVERRIDES:-}" in *winedbg*) ;; *) export WINEDLLOVERRIDES="${WINE
 # scripts that merely mention the name)
 css_pids() { pgrep -fl "${CSS_EXE//./\\.}" | awk '$2 ~ /^C:/ {print $1}'; }
 css_running() { [ -n "$(css_pids)" ]; }
-# Steam client running in the prefix: argv[0] is steam.exe (with or without -silent)
-steam_running() { pgrep -fl 'steam\.exe' | awk '$2 ~ /(^|\\)steam\.exe$/ {f=1} END {exit !f}'; }
+# Steam client running in the prefix: the program (the command line up to its first " -" option) is steam.exe. The path
+# has spaces ("Program Files (x86)"), so the program can't be read as one awk field.
+steam_running() { pgrep -fl 'steam\.exe' | sed -E 's/^[0-9]+ //; s/ -.*//' | grep -qiE '(^|\\)steam\.exe$'; }
 # Start Steam if needed and wait for a NEW "Logged On" line (old lines from earlier sessions don't count). A game
 # started before Steam has logged on runs -insecure and crashes during load (seen with TF2 upstream). Steam is shut
 # down after every session, so test scripts must use this rather than grepping the whole connection log.
