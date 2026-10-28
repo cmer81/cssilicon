@@ -114,3 +114,14 @@ test-translate: translate-tools
 	build/tools/mslbatch --link 500 corpus
 
 .PHONY: translate-tools test-translate
+
+# 120 Hz display switch for game sessions (scripts/play.sh, scripts/session-end.sh)
+display120: build/tools/display120
+build/tools/display120: tools/display/main.swift tools/display/DisplayModes.swift
+	@mkdir -p build/tools
+	swiftc -O -target arm64-apple-macos13 -o $@ tools/display/DisplayModes.swift tools/display/main.swift
+test-display: tools/display/DisplayModes.swift tests/unit/display_modes_tests.swift
+	@mkdir -p build/tests
+	cp tests/unit/display_modes_tests.swift build/tests/main.swift   # top-level code only compiles from main.swift
+	swiftc -target arm64-apple-macos13 -o build/tests/display_modes tools/display/DisplayModes.swift build/tests/main.swift
+	build/tests/display_modes

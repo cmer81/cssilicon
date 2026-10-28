@@ -12,6 +12,8 @@ if ! mkdir "$LOCK" 2>/dev/null; then
 fi
 echo $$ > "$LOCK/pid"; trap 'rm -rf "$LOCK"' EXIT
 if css_running; then log "the game is running: nothing to do"; exit 0; fi
+D120="${CSS_DISPLAY120:-$CSSMT_ROOT/build/tools/display120}"   # display back to its mode from before the session
+[ -x "$D120" ] && [ -f "$RUN/display-before" ] && "$D120" restore "$RUN/display-before" >> "$LOG" 2>&1
 server_up() { pgrep -f "$CSS_HOME/wine/.*wineserver" >/dev/null; }
 log "start (steam running: $(steam_running && echo yes || echo no))"
 if [ -f "$RUN/friends-offline" ]; then

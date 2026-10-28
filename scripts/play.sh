@@ -7,6 +7,15 @@ if css_running; then notify "CS:S is already running."; exit 0; fi
 RUN="$CSS_HOME/run"; mkdir -p "$RUN"
 # a session that is still shutting down (quit + Play right away) must finish first, or it would close our Steam
 for _ in $(seq 45); do p=$(cat "$RUN/teardown.lock/pid" 2>/dev/null); [ -n "$p" ] && kill -0 "$p" 2>/dev/null || break; sleep 1; done
+# display: first put back a mode an earlier session left behind (crash, Mac asleep), then 120 Hz for this session
+# (launcher option CSS_DISPLAY_120, default on); session-end.sh restores it. CSS_DISPLAY120 overrides the tool (tests).
+D120="${CSS_DISPLAY120:-$CSSMT_ROOT/build/tools/display120}"
+if [ -x "$D120" ]; then
+  mkdir -p "$CSS_HOME/logs"
+  "$D120" restore "$RUN/display-before" >> "$CSS_HOME/logs/session.log" 2>&1
+  [ "${CSS_DISPLAY_120:-1}" = 1 ] && "$D120" set "$RUN/display-before" >> "$CSS_HOME/logs/session.log" 2>&1
+fi
+[ "${CSS_DRY_RUN:-0}" = 1 ] && exit 0   # tests: stop before Steam and the game
 echo $$ > "$RUN/launch-pending"; trap 'rm -f "$RUN/launch-pending"' EXIT   # tells session-helper.sh a launch is in progress
 if ! steam_running; then
   n=$(wc -l < "$STEAM_DIR/logs/connection_log.txt" 2>/dev/null || echo 0)
