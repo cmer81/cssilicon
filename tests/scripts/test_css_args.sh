@@ -9,3 +9,8 @@ test_no_refresh_when_display_option_off() {
   case "$out" in *"-refresh"*) assert_eq "no -refresh" "$out" "display option off";; esac
   case "$out" in *"-w 2560 -h 1440"*) ;; *) assert_eq "-w 2560 -h 1440" "$out" "window size";; esac
 }
+test_user_resolution_wins() {
+  out=$(css_cmd -w 1920 -h 1080)
+  case "$out" in *"-w 2560"*) assert_eq "only the player's -w/-h" "$out" "Source takes the first -w, so ours must not be there";; esac
+  case "$out" in *"-w 1920 -h 1080"*) ;; *) assert_eq "-w 1920 -h 1080" "$out" "player's size kept";; esac
+}

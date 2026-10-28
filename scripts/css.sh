@@ -78,7 +78,9 @@ apply_mic() {
 [ "${CSS_TUNED:-1}" = 1 ] && "$CSSMT_ROOT/scripts/presets.sh" auto >/dev/null 2>&1
 
 # game window: 2560x1440 by default (the M1 can't drive the 5K backing store at 120 fps)
-game_args=(-novid -nojoy -nosteamcontroller -nohltv -w "${CSS_WIDTH:-2560}" -h "${CSS_HEIGHT:-1440}")
+game_args=(-novid -nojoy -nosteamcontroller -nohltv)
+# ...unless the player gave a size in the launch options: Source reads the first -w/-h only
+case " $* " in *" -w "*|*" -h "*) ;; *) game_args+=(-w "${CSS_WIDTH:-2560}" -h "${CSS_HEIGHT:-1440}") ;; esac
 # fullscreen takes the first mode of the requested size, which is the 60 Hz one under the Metal renderer (modes are
 # listed by rising refresh rate): ask for the rate scripts/play.sh switched the display to
 [ "${CSS_DISPLAY_120:-1}" = 1 ] && game_args+=(-refresh 120)
