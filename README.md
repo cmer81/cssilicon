@@ -5,7 +5,7 @@
 
 # CSSilicon
 
-**Play Counter-Strike: Source on Apple Silicon Macs — smooth, VAC-safe, one click.**
+**Play Counter-Strike: Source on Apple Silicon Macs — smooth, on VAC-secured servers, in one click.**
 
 ![Apple Silicon](https://img.shields.io/badge/Apple_Silicon-M1_·_M2_·_M3_·_M4-black?style=flat-square&logo=apple)
 ![macOS](https://img.shields.io/badge/macOS-13%2B-blue?style=flat-square)
@@ -117,9 +117,15 @@ flowchart LR
 <details>
 <summary><b>Is it safe with VAC?</b></summary>
 
-CSSilicon doesn't modify the game, inject code into it or touch its memory. It works like Proton on the Steam Deck: the
-game talks to a Direct3D 9 library (DXVK or the Metal renderer), the way it would on Windows. That said, use it at your
-own risk, as with any third-party tool.
+CSSilicon plays on VAC-secured servers, and no bans are known. It doesn't patch the game's files, inject code into the
+game or touch its memory. What it does put in place:
+
+- a `d3d9.dll` next to the game, for the session only, when the Metal renderer is on (removed when the game exits) —
+  the same mechanism as DXVK, and as Proton on the Steam Deck;
+- preset files in `cstrike/custom/cssmt` and one line in `cstrike/cfg/autoexec.cfg`.
+
+Valve has never said anything about running the game this way, so use it at your own risk, as with any third-party
+tool.
 </details>
 
 <details>
