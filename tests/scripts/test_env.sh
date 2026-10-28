@@ -15,7 +15,8 @@ test_css_pids_ignores_shells() {
   assert_eq function "$(type -t css_pids)" "css_pids is defined"
   ( exec -a "bash -c echo $CSS_EXE" sleep 3 ) & p=$!
   sleep 0.3
-  assert_eq "" "$(css_pids)" "a shell mentioning the exe is not the game"; kill $p
+  found=$(css_pids | grep -x "$p"); kill $p
+  assert_eq "" "$found" "a shell mentioning the exe is not the game"
 }
 test_steam_running_with_spaces_in_path() {
   . scripts/_env.sh
