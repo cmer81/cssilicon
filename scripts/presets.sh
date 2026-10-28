@@ -4,8 +4,8 @@
 #   scripts/presets.sh set <preset>   -> low | balanced | high | none
 #   scripts/presets.sh auto           -> before each launch: installs Balanced on a brand-new install only
 # A preset is config/presets/<name>.cfg, copied to cstrike/custom/cssmt/cfg/cssmt_preset.cfg (first line
-# "// cssmt preset: <name>") and run by one line appended to cstrike/cfg/autoexec.cfg. The player's own lines in
-# autoexec.cfg are never touched; `set none` takes our line out again and leaves the file as it was (deleted if we
+# "// cssmt preset: <name>") and run by one line at the top of cstrike/cfg/autoexec.cfg, so the player's own lines run
+# after it and win. The player's lines are never touched; `set none` takes our line out again and leaves the file as it was (deleted if we
 # created it). own=yes: autoexec.cfg has lines of the player's. pending=yes: `auto` would install Balanced next launch.
 # `auto` decides once (marker in $CSS_HOME/config): never after the player picked a preset or None, and never for a
 # game that already ran (cstrike/cfg/config.cfg) or has its own autoexec. Takes effect the next time the game starts.
@@ -21,19 +21,21 @@ own() { [ -f "$AE" ] && grep -vxF "$LINE" "$AE" | grep -q . && echo yes || echo 
 pending() {
   [ -f "$DONE" ] || [ "$(current)" != none ] || [ -f "$CFG/config.cfg" ] || [ "$(own)" = yes ] && echo no || echo yes
 }
-add_line() {
+add_line() {   # on top: the preset runs first, the player's own lines after it and win
   mkdir -p "$CFG" "$CONF"
   [ -f "$AE" ] && grep -qxF "$LINE" "$AE" && return 0
-  if [ ! -f "$AE" ]; then touch "$CREATED"; : > "$AE"
-  elif [ -s "$AE" ] && [ -n "$(tail -c 1 "$AE")" ]; then touch "$NONL"; echo >> "$AE"   # file ended without newline
-  fi
-  echo "$LINE" >> "$AE"
+  if [ ! -f "$AE" ]; then touch "$CREATED"; echo "$LINE" > "$AE"; return 0; fi
+  [ -s "$AE" ] && [ -n "$(tail -c 1 "$AE")" ] && touch "$NONL"   # no final newline: taking our line out must not add one
+  { echo "$LINE"; cat "$AE"; } > "$AE.cssmt-tmp" && mv "$AE.cssmt-tmp" "$AE"
 }
-remove_line() {
+remove_line() {   # takes out our line wherever it is (earlier builds appended it), leaving the player's bytes as they were
   [ -f "$AE" ] || return 0
-  grep -vxF "$LINE" "$AE" > "$AE.cssmt-tmp"
-  if [ -f "$NONL" ]; then printf '%s' "$(cat "$AE.cssmt-tmp")" > "$AE.cssmt-tmp"; rm -f "$NONL"; fi
-  mv "$AE.cssmt-tmp" "$AE"
+  if [ -f "$NONL" ]; then   # the player's file had no final newline (grep adds one): drop it again
+    grep -vxF "$LINE" "$AE" > "$AE.cssmt-tmp"; printf '%s' "$(cat "$AE.cssmt-tmp")" > "$AE.cssmt-tmp2"
+    mv "$AE.cssmt-tmp2" "$AE"; rm -f "$AE.cssmt-tmp" "$NONL"
+  else
+    grep -vxF "$LINE" "$AE" > "$AE.cssmt-tmp"; mv "$AE.cssmt-tmp" "$AE"
+  fi
   if [ -f "$CREATED" ] && [ ! -s "$AE" ]; then rm -f "$AE"; fi
   rm -f "$CREATED"
 }

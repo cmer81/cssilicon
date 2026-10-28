@@ -38,7 +38,7 @@ Counter-Strike: Source with your own Steam account and launches it with settings
 - **Adapts to your Mac**: runs at your display's own resolution and refresh rate by default; pick a lower resolution
   or a fixed refresh rate (120 Hz, 144 Hz…) for the session, and the display is put back when you quit.
 - **Smooth mouse**: aim updates every frame (patched Wine mouse handling from tf2mt).
-- **Graphics presets** (Low, Balanced, High) that never overwrite your own `autoexec.cfg`.
+- **Graphics presets** (Low, Balanced, High): your own `autoexec.cfg` lines are kept and win over the preset.
 - **Clean sessions**: Steam and Wine shut down when the game exits, however it exits.
 - **Quality of life**: microphone picker, show/hide the Steam window, config folders, logs.
 

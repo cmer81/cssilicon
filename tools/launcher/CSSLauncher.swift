@@ -1237,7 +1237,7 @@ struct ContentView: View {
     private var activeConfig: (title: String, detail: String) {
         if launcher.preset != "none" {
             return ("CSSilicon " + launcher.preset.capitalized,
-                    launcher.presetOwn ? "Runs after your autoexec.cfg lines." : "Your own lines go in autoexec.cfg.")
+                    launcher.presetOwn ? "Your autoexec.cfg lines run after it and win." : "Your own lines go in autoexec.cfg (they win over the preset).")
         }
         if launcher.presetPending { return ("CSSilicon Balanced", "Installed on first launch.") }
         if launcher.presetOwn { return ("your own config", "autoexec.cfg found, no CSSilicon preset.") }

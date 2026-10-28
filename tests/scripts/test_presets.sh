@@ -11,9 +11,10 @@ test_set_creates_autoexec() {
   assert_eq "preset=balanced own=no pending=no" "$(presets status)" "status"
 }
 test_preset_keeps_user_autoexec() {
-  setup_game; echo 'bind f4 kill' > "$AE"; presets set high >/dev/null
-  assert_eq "bind f4 kill" "$(sed -n 1p "$AE")" "user line first, unchanged"
-  assert_eq "$LINE" "$(sed -n 2p "$AE")" "our line second"
+  setup_game; echo 'fps_max 144' > "$AE"; presets set high >/dev/null
+  # ours first: the preset runs, then the player's own lines, which win (their fps_max stays 144)
+  assert_eq "$LINE" "$(sed -n 1p "$AE")" "our line first"
+  assert_eq "fps_max 144" "$(sed -n 2p "$AE")" "player's line after it, unchanged"
   assert_eq 2 "$(wc -l < "$AE" | tr -d ' ')" "two lines"
   assert_eq "preset=high own=yes pending=no" "$(presets status)" "status with own autoexec"
 }
@@ -25,7 +26,7 @@ test_set_twice_no_duplicate() {
 test_none_restores_exactly() {
   setup_game; printf 'bind f4 kill\nsensitivity 2\n' > "$AE"; cp "$AE" "$TEST_TMP/orig"
   presets set balanced >/dev/null
-  assert_eq "$LINE" "$(tail -1 "$AE")" "preset line appended"
+  assert_eq "$LINE" "$(head -1 "$AE")" "preset line added on top"
   presets set none >/dev/null
   assert_file_eq "$TEST_TMP/orig" "$AE"
   assert_eq no "$([ -e "$CSSDIR/cstrike/custom/cssmt" ] && echo yes || echo no)" "custom/cssmt removed"
