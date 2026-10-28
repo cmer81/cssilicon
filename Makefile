@@ -105,6 +105,9 @@ build/translate/x86_64.o: $(XLATE_DEP)
 
 # M4 acceptance: golden opcode tests, GPU-vs-CPU differential test and Metal compile of the live corpus.
 # Full corpus (corpus/vcs, ~320k shaders, ~1 h): build/tools/mslbatch --scope all corpus corpus/vcs
+test-scripts:
+	bash tests/scripts/run.sh
+
 test-translate: translate-tools
 	build/tools/opcodes
 	build/tools/difftest corpus

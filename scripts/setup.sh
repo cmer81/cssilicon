@@ -6,7 +6,7 @@
 # Output lines starting with "==>" are step headers, "OK"/"SKIP"/"FAIL"/"TODO" are results (parsed by the launcher).
 set -u
 . "$(dirname "$0")/_env.sh"
-. "$TF2MT_ROOT/config/release.conf" 2>/dev/null || true   # RUNTIME_URL / RUNTIME_SHA256 of the published runtime
+. "$CSSMT_ROOT/config/release.conf" 2>/dev/null || true   # RUNTIME_URL / RUNTIME_SHA256 of the published runtime
 
 RUNTIME_SRC="${TF2MT_RUNTIME:-${RUNTIME_URL:-}}"
 while [ $# -gt 0 ]; do
@@ -71,14 +71,14 @@ else
 fi
 
 step "tf2mt configs"
-for f in dxvk.conf dxvk-immediate.conf; do cp "$TF2MT_ROOT/config/$f" "$TF2_HOME/config/$f"; done
+for f in dxvk.conf dxvk-immediate.conf; do cp "$CSSMT_ROOT/config/$f" "$TF2_HOME/config/$f"; done
 ok "DXVK configs → $TF2_HOME/config"
 
 step "Smooth mouse fix (Wine patch)"
-st=$(/bin/bash "$TF2MT_ROOT/tools/wine-patches/winemac_warp_nodiscard.sh" status 2>&1)
+st=$(/bin/bash "$CSSMT_ROOT/tools/wine-patches/winemac_warp_nodiscard.sh" status 2>&1)
 case $st in
   patched*)  skip "already applied" ;;
-  original*) /bin/bash "$TF2MT_ROOT/tools/wine-patches/winemac_warp_nodiscard.sh" apply >/dev/null && ok "applied" || fail "patch failed" ;;
+  original*) /bin/bash "$CSSMT_ROOT/tools/wine-patches/winemac_warp_nodiscard.sh" apply >/dev/null && ok "applied" || fail "patch failed" ;;
   *)         todo "this Wine build is not the tested one — patch not applied (mouse may feel ~40 Hz)" ;;
 esac
 

@@ -21,26 +21,26 @@ fi
 # Runs VAC-secured like DXVK. (-insecure can't be used: tf.exe drops it before starting tf_win64.exe.)
 renderer=${TF2_RENDERER:-dxvk}
 # leftovers from a session that ended without cleanup (e.g. the Mac shut down mid-game) would break the next one
-tf2_running || { "$TF2MT_ROOT/scripts/layer-uninstall.sh" >/dev/null 2>&1; rm -f "$TF2DIR/d3d9_ref.dll"; }
+tf2_running || { "$CSSMT_ROOT/scripts/layer-uninstall.sh" >/dev/null 2>&1; rm -f "$TF2DIR/d3d9_ref.dll"; }
 # Frame-time recording on DXVK (TF2_FRAMELOG=1): the timing proxy (tools/trace, Phase 0 benchmarks) wraps DXVK for
 # this session and is removed on exit. Output: $TF2_HOME/logs/dxvk/<timestamp>/frames-session.csv
-if [ "$renderer" = dxvk ] && [ "${TF2_FRAMELOG:-0}" = 1 ] && [ -f "$TF2MT_ROOT/build/trace/d3d9.dll" ]; then
+if [ "$renderer" = dxvk ] && [ "${TF2_FRAMELOG:-0}" = 1 ] && [ -f "$CSSMT_ROOT/build/trace/d3d9.dll" ]; then
   sess="$TF2_HOME/logs/dxvk/$(date +%Y%m%d-%H%M%S)"; mkdir -p "$sess"
-  cp "$TF2MT_ROOT/build/trace/d3d9.dll" "$TF2DIR/d3d9.dll"
+  cp "$CSSMT_ROOT/build/trace/d3d9.dll" "$TF2DIR/d3d9.dll"
   cp "$TF2_HOME/wine/share/dxvk/x86_64-windows/d3d9.dll" "$TF2DIR/d3d9_ref.dll"
   export TF2MT_TRACE_DIR="Z:${sess//\//\\}" TF2MT_TAG=session
-  "$TF2MT_ROOT/scripts/mastercomfig.sh" status > "$sess/preset.txt" 2>/dev/null
+  "$CSSMT_ROOT/scripts/mastercomfig.sh" status > "$sess/preset.txt" 2>/dev/null
   renderer=dxvk-logged
 fi
 if [ "$renderer" = tf2mt ]; then
-  if "$TF2MT_ROOT/scripts/layer-install.sh" >/dev/null 2>&1; then
+  if "$CSSMT_ROOT/scripts/layer-install.sh" >/dev/null 2>&1; then
     sess="$TF2_HOME/logs/tf2mt/$(date +%Y%m%d-%H%M%S)"; mkdir -p "$sess"
     ls -dt "$TF2_HOME/logs/tf2mt"/*/ 2>/dev/null | tail -n +6 | xargs rm -rf 2>/dev/null   # keep the last 5 sessions
     export TF2MT_UNIX_LOG="$sess/unix.log" TF2MT_TRACE_DIR="Z:${sess//\//\\}" TF2MT_TAG=session
     export TF2MT_FRAME_LOG="Z:${sess//\//\\}\\frames.csv"   # per-frame times (tools/bench/session_report.py)
     # per-frame start / display / camera timing (docs/mouse-input.md); ~30 MB per hour, so opt-in
     { [ "${TF2MT_LATENCY_LOG:-0}" = 1 ] || [ -f "$TF2_HOME/config/latency-log" ]; } && export TF2MT_LATENCY_CSV="$sess/latency.csv"
-    "$TF2MT_ROOT/scripts/mastercomfig.sh" status > "$sess/preset.txt" 2>/dev/null
+    "$CSSMT_ROOT/scripts/mastercomfig.sh" status > "$sess/preset.txt" 2>/dev/null
   else
     echo "tf2mt layer not available (build it: make frontend unixlib) — starting with DXVK"; renderer=dxvk
   fi
@@ -96,7 +96,7 @@ if [ "$renderer" = tf2mt ]; then   # remove the layer when the game is gone (nor
   (
     for _ in $(seq 120); do tf2_running && break; sleep 1; done
     while tf2_running; do sleep 5; done
-    "$TF2MT_ROOT/scripts/layer-uninstall.sh" >/dev/null 2>&1
+    "$CSSMT_ROOT/scripts/layer-uninstall.sh" >/dev/null 2>&1
   ) >/dev/null 2>&1 &
   disown
   echo "renderer: tf2mt; logs: $sess"

@@ -5,13 +5,13 @@
 # data (what TF2 really saw) is the yardstick.   usage: tools/census/adapter-parity.sh [census_variant, default caps2]
 set -u
 cd "$(dirname "$0")/../.."; . scripts/_env.sh
-O=$TF2MT_ROOT/build/parity; mkdir -p "$O"; rm -f "$O"/tf2mt.*
+O=$CSSMT_ROOT/build/parity; mkdir -p "$O"; rm -f "$O"/tf2mt.*
 win() { echo "Z:${1//\//\\}"; }
 make -s probe frontend unixlib >/dev/null 2>&1
 scripts/layer-install.sh >/dev/null
 trap 'scripts/layer-uninstall.sh >/dev/null' EXIT
 cp build/tools/probe.exe "$TF2_HOME/cache/probe.exe"
-"$WINE" "$(win "$TF2_HOME/cache/probe.exe")" tf2mt.dll "$(win "$O/tf2mt.tsv")" "$(win "$TF2MT_ROOT/tests/golden/adapter_queries.tsv")" >"$O/tf2mt.log" 2>&1 &
+"$WINE" "$(win "$TF2_HOME/cache/probe.exe")" tf2mt.dll "$(win "$O/tf2mt.tsv")" "$(win "$CSSMT_ROOT/tests/golden/adapter_queries.tsv")" >"$O/tf2mt.log" 2>&1 &
 pid=$!; n=0
 while kill -0 $pid 2>/dev/null && [ $n -lt 120 ]; do sleep 1; n=$((n + 1)); done
 kill -0 $pid 2>/dev/null && { echo "probe timed out"; kill $pid; exit 2; }

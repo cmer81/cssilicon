@@ -3,7 +3,7 @@
 # d3d9.dll forwarder beside tf_win64.exe. Wine's own d3d9 and DXVK are not modified. Undo: layer-uninstall.sh
 set -eu
 . "$(dirname "$0")/_env.sh"
-B="$TF2MT_ROOT/build/tf2mt"
+B="$CSSMT_ROOT/build/tf2mt"
 for f in tf2mt.dll tf2mt.so d3d9.dll; do [ -f "$B/$f" ] || { echo "missing $B/$f — run: make frontend unixlib"; exit 1; }; done
 L="$TF2_HOME/wine/lib/wine"
 cp "$B/tf2mt.dll" "$L/x86_64-windows/tf2mt.dll"
