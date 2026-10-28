@@ -1,4 +1,4 @@
-// cssmt launcher — Counter-Strike: Source on Apple Silicon (native SwiftUI, built by tools/launcher/build.sh).
+// CSSilicon launcher — Counter-Strike: Source on Apple Silicon (native SwiftUI, built by tools/launcher/build.sh).
 // A fork of tf2mt's launcher. Self-contained: the cssmt scripts/configs/patch tool are bundled in Resources/cssmt (a
 // dev build without them falls back to ~/Documents/css-osx). No Valve content is bundled: CS:S library art is loaded
 // at runtime from the user's own installation. All game work is done by the bundled shell scripts; the app passes
@@ -373,7 +373,7 @@ final class Launcher: ObservableObject {
     func setPreset(_ name: String) {
         guard name != preset || (name == "none" && presetPending) else { return }
         preset = name; presetPending = false
-        message = name == "none" ? "Turning the cssmt preset off…" : "Switching to \(name.capitalized)…"
+        message = name == "none" ? "Turning the CSSilicon preset off…" : "Switching to \(name.capitalized)…"
         Task.detached {
             let r = shell(["/bin/bash", Paths.script("presets.sh"), "set", name], env: scriptEnv())
             await MainActor.run {
@@ -413,7 +413,7 @@ final class Launcher: ObservableObject {
                        fix: "Click “Log in to Steam” and sign in once (Steam Guard as usual)."),
             SetupCheck(id: "css", title: "Counter-Strike: Source installed", ok: cssInstalled,
                        fix: "Click “Install CS:S” (≈15 GB in Steam; you need to own the game)."),
-            SetupCheck(id: "config", title: "cssmt configs", ok: exists(Paths.dxvkTearFree) && exists(Paths.dxvkImmediate),
+            SetupCheck(id: "config", title: "CSSilicon configs", ok: exists(Paths.dxvkTearFree) && exists(Paths.dxvkImmediate),
                        fix: "Installed by “Run setup”."),
             SetupCheck(id: "mouse", title: "Smooth mouse fix", ok: mouseFix == .applied,
                        fix: mouseFix == .unknown ? "Needs the tf2mt Wine runtime (patch matches that exact Wine build)."
@@ -477,7 +477,7 @@ final class Launcher: ObservableObject {
         panel.canChooseDirectories = true
         panel.canChooseFiles = false
         panel.canCreateDirectories = true
-        panel.message = "Choose where cssmt keeps Wine, Steam and CS:S (needs ~20 GB)"
+        panel.message = "Choose where CSSilicon keeps Wine, Steam and CS:S (needs ~20 GB)"
         if panel.runModal() == .OK, let url = panel.url {
             UserDefaults.standard.set(url.path, forKey: "gameHome")
             artVersion += 1
@@ -485,14 +485,14 @@ final class Launcher: ObservableObject {
         }
     }
 
-    /// Debug → "Load .exe…": pick a Windows program and run it in the cssmt Wine prefix (scripts/run-exe.sh).
+    /// Debug → "Load .exe…": pick a Windows program and run it in the CSSilicon Wine prefix (scripts/run-exe.sh).
     func loadExe() {
         let panel = NSOpenPanel()
         panel.canChooseDirectories = false
         panel.canChooseFiles = true
         panel.allowsMultipleSelection = false
         if let exe = UTType(filenameExtension: "exe") { panel.allowedContentTypes = [exe] }
-        panel.message = "Choose a Windows program to run in the cssmt Wine environment"
+        panel.message = "Choose a Windows program to run in the CSSilicon Wine environment"
         guard panel.runModal() == .OK, let url = panel.url else { return }
         let name = url.lastPathComponent
         message = "Starting \(name)…"
@@ -543,7 +543,7 @@ final class Launcher: ObservableObject {
             let r = SessionRunner.runSync(Array(args.dropFirst()), env: env)   // args[0] is /bin/bash
             let logURL = URL(fileURLWithPath: Paths.logs + "/launcher.log")
             if let h = try? FileHandle(forWritingTo: logURL) {
-                h.seekToEndOfFile(); h.write(Data(("=== cssmt launcher \(Date())\n" + r.output).utf8)); try? h.close()
+                h.seekToEndOfFile(); h.write(Data(("=== CSSilicon launcher \(Date())\n" + r.output).utf8)); try? h.close()
             } else {
                 try? r.output.write(to: logURL, atomically: true, encoding: .utf8)
             }
@@ -626,15 +626,15 @@ enum Session {
     }
 }
 
-/// Runs cssmt scripts through the invisible "cssmt Session" app (Contents/Helpers), opened via LaunchServices.
+/// Runs the scripts through the invisible "CSSilicon Session" app (Contents/Helpers), opened via LaunchServices.
 /// macOS 27 attributes processes to the app that started them (upstream finding): Steam/Wine/the game started by the
 /// launcher itself kept the launcher in the Dock as "running in background" after quitting (and "Stop Running in Background" killed the game).
 /// Started by the Session app (which exits right after its script), they belong to no visible app.
 enum SessionRunner {
-    static var appPath: String { Bundle.main.bundlePath + "/Contents/Helpers/cssmt Session.app" }
-    static var available: Bool { exists(appPath + "/Contents/MacOS/cssmt-session") }
+    static var appPath: String { Bundle.main.bundlePath + "/Contents/Helpers/CSSilicon Session.app" }
+    static var available: Bool { exists(appPath + "/Contents/MacOS/cssilicon-session") }
 
-    /// `bash <scriptArgs>` with the cssmt environment. Output lines -> onOutput, exit code -> onExit (background
+    /// `bash <scriptArgs>` with the CSSilicon environment. Output lines -> onOutput, exit code -> onExit (background
     /// thread). Returns false if it couldn't be started.
     @discardableResult
     static func run(_ scriptArgs: [String], env: [String: String] = scriptEnv(),
@@ -922,12 +922,12 @@ struct ContentView: View {
                         Text("COUNTER-STRIKE: SOURCE").font(.system(size: 40, weight: .black)).foregroundStyle(Color.tfCream)
                             .shadow(color: .black.opacity(0.6), radius: 8, y: 3)
                     }
-                    Text("CSSMT  ·  TUNED FOR APPLE SILICON")
+                    Text("CSSILICON  ·  COUNTER-STRIKE: SOURCE ON APPLE SILICON")
                         .font(.build(16)).tracking(1.5).foregroundStyle(Color.tfOrangeLight)
                         .shadow(color: .black, radius: 3)
                 }
                 Spacer()
-                Text("\(displayName)  ·  \(displayRefreshHz) Hz  ·  cssmt \(appVersion)")
+                Text("\(displayName)  ·  \(displayRefreshHz) Hz  ·  CSSilicon \(appVersion)")
                     .font(.secondary(13)).foregroundStyle(Color.tfCream.opacity(0.75)).shadow(color: .black, radius: 3)
             }
             .padding(.horizontal, 28).padding(.bottom, 12)
@@ -1023,7 +1023,7 @@ struct ContentView: View {
     private var configs: some View {
         Card(title: "") {
             HStack {
-                RowText(title: "Graphics preset", detail: "cssmt profile in cstrike/custom/cssmt. Applies on next launch.")
+                RowText(title: "Graphics preset", detail: "CSSilicon profile (cstrike/custom/cssmt). Applies on next launch.")
                 // brand-new install: shown as Balanced, which the first launch installs (presets.sh auto)
                 Picker("", selection: Binding(get: { launcher.preset == "none" && launcher.presetPending ? "balanced" : launcher.preset },
                                               set: { launcher.setPreset($0) })) {
@@ -1058,12 +1058,12 @@ struct ContentView: View {
     /// What decides the game's settings, in plain words for the Configs tab.
     private var activeConfig: (title: String, detail: String) {
         if launcher.preset != "none" {
-            return ("cssmt " + launcher.preset.capitalized,
+            return ("CSSilicon " + launcher.preset.capitalized,
                     launcher.presetOwn ? "Runs after your autoexec.cfg lines." : "Your own lines go in autoexec.cfg.")
         }
-        if launcher.presetPending { return ("cssmt Balanced", "Installed on first launch.") }
-        if launcher.presetOwn { return ("your own config", "autoexec.cfg found, no cssmt preset.") }
-        return ("game settings", "No cssmt preset and no autoexec.cfg: the in-game Video options decide.")
+        if launcher.presetPending { return ("CSSilicon Balanced", "Installed on first launch.") }
+        if launcher.presetOwn { return ("your own config", "autoexec.cfg found, no CSSilicon preset.") }
+        return ("game settings", "No CSSilicon preset and no autoexec.cfg: the in-game Video options decide.")
     }
 
     private var debug: some View {
@@ -1078,7 +1078,7 @@ struct ContentView: View {
             Divider().overlay(Color.white.opacity(0.06))
             HStack {
                 RowText(title: "Run a Windows program",
-                        detail: "Runs an .exe in the cssmt Wine environment (same prefix and runtime).")
+                        detail: "Runs an .exe in the CSSilicon Wine environment (same prefix and runtime).")
                 Button("Load .exe…") { launcher.loadExe() }
                     .buttonStyle(SmallButtonStyle()).frame(width: 100)
                     .disabled(!exists(Paths.wine))
@@ -1088,7 +1088,7 @@ struct ContentView: View {
 
     private var setup: some View {
         Card(title: "") {
-            Text("cssmt uses tf2mt's Wine runtime; Steam and CS:S are installed from Valve, into your own folder. Nothing from Valve is redistributed.")
+            Text("CSSilicon uses tf2mt's Wine runtime; Steam and CS:S are installed from Valve, into your own folder. Nothing from Valve is redistributed.")
                 .font(.system(size: 12)).foregroundStyle(Color.tfCream.opacity(0.7))
                 .fixedSize(horizontal: false, vertical: true)
             HStack(spacing: 10) {
@@ -1157,8 +1157,18 @@ struct ContentView: View {
 @main
 struct CSSLauncherApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
+    init() {
+        // settings of the builds named cssmt (bundle id local.cssmt.launcher), carried over once
+        let d = UserDefaults.standard
+        if !d.bool(forKey: "importedCssmtSettings"), let old = UserDefaults(suiteName: "local.cssmt.launcher") {
+            for (k, v) in old.dictionaryRepresentation() where d.object(forKey: k) == nil && !k.hasPrefix("NS") && !k.hasPrefix("Apple") {
+                d.set(v, forKey: k)
+            }
+            d.set(true, forKey: "importedCssmtSettings")
+        }
+    }
     var body: some Scene {
-        WindowGroup("cssmt") {
+        WindowGroup("CSSilicon") {
             ContentView().preferredColorScheme(.dark)
         }
         .windowStyle(.hiddenTitleBar)

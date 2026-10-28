@@ -1,6 +1,6 @@
-// cssmt Session — invisible helper app inside cssmt.app (Contents/Helpers). The launcher opens it through
+// CSSilicon Session — invisible helper app inside CSSilicon.app (Contents/Helpers). The launcher opens it through
 // LaunchServices (`open -n -g -j ... --args <script> [args]`) to run the scripts that start Steam/CS:S/setup.
-// Processes started this way are not attributed to the launcher, so on macOS 27 quitting cssmt really quits it:
+// Processes started this way are not attributed to the launcher, so on macOS 27 quitting CSSilicon really quits it:
 // no "running in background" Dock state whose "Stop Running in Background" would kill Steam and the game.
 // Output (stdout+stderr) goes to $CSSMT_OUT, the exit code to $CSSMT_OUT.status; then this app exits.
 import Foundation

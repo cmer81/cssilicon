@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-"""make_icon.py <out.iconset> [preview.png]: original cssmt app icon (no Valve artwork).
-Rounded square on the Apple icon grid, dark steel with an amber band, "css" + "mt" set in Futura."""
+"""make_icon.py <out.iconset> [preview.png]: original CSSilicon app icon (no Valve artwork).
+Rounded square on the Apple icon grid, dark steel with an amber band, "css" + "Si" set in Futura."""
 import os, sys
 from PIL import Image, ImageDraw, ImageFont, ImageFilter
 
@@ -34,7 +34,7 @@ def shadowed(draw_xy, text, font, fill):
 w = td.textlength('css', font=big)
 s1, a = shadowed(((R - w) / 2 - 20, 120), 'css', big, cream)
 body = Image.alpha_composite(body, s1); ImageDraw.Draw(body).text(*a[:1], a[1], font=a[2], fill=a[3])
-s2, b = shadowed((R - 300, R - 300), 'mt', small, (255, 255, 255, 255))
+s2, b = shadowed((R - 270, R - 300), 'Si', small, (255, 255, 255, 255))
 body = Image.alpha_composite(body, s2); ImageDraw.Draw(body).text(*b[:1], b[1], font=b[2], fill=b[3])
 mask = Image.new('L', (R, R), 0); ImageDraw.Draw(mask).rounded_rectangle((0, 0, R - 1, R - 1), radius=185, fill=255)
 icon.paste(body, (O, O), mask)
