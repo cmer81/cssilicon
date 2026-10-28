@@ -16,3 +16,9 @@ test_display_opt_out() {
   fake_display120; CSS_DISPLAY_120=0 bash scripts/play.sh >/dev/null 2>&1
   assert_eq "restore" "$(tr '\n' ' ' < "$LOG" | sed 's/ $//')" "opt-out: only the leftover restore"
 }
+test_display_follows_game_size() {
+  game_up && return 0
+  fake_display120; printf '#!/bin/bash\necho "$*" >> "%s"\n' "$LOG" > "$TEST_TMP/display120"
+  bash scripts/play.sh -w 1920 -h 1080 >/dev/null 2>&1
+  assert_eq "set $CSS_HOME/run/display-before 1920 1080" "$(grep '^set' "$LOG")" "display switched to the game's size"
+}

@@ -84,6 +84,9 @@ case " $* " in *" -w "*|*" -h "*) ;; *) game_args+=(-w "${CSS_WIDTH:-2560}" -h "
 # fullscreen takes the first mode of the requested size, which is the 60 Hz one under the Metal renderer (modes are
 # listed by rising refresh rate): ask for the rate scripts/play.sh switched the display to
 [ "${CSS_DISPLAY_120:-1}" = 1 ] && game_args+=(-refresh 120)
+# Metal renderer: color correction comes out blue (the renderer binds a dummy texture where the shader samples a cube
+# and the game bound a 2D one), so it is turned off for the session. It is an archived cvar: it stays off afterwards.
+[ "$renderer" = tf2mt ] && game_args+=(+mat_colorcorrection 0)
 [ "${CSS_DRY_RUN:-0}" = 1 ] && { echo "game: ${game_args[*]} $*"; exit 0; }   # tests
 
 # Steam overlay (launcher setting, CSS_STEAM_OVERLAY=1, DXVK only): Steam only injects its overlay into games it starts

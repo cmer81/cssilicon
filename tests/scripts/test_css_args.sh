@@ -14,3 +14,10 @@ test_user_resolution_wins() {
   case "$out" in *"-w 2560"*) assert_eq "only the player's -w/-h" "$out" "Source takes the first -w, so ours must not be there";; esac
   case "$out" in *"-w 1920 -h 1080"*) ;; *) assert_eq "-w 1920 -h 1080" "$out" "player's size kept";; esac
 }
+test_metal_renderer_turns_color_correction_off() {
+  tmp_home; . scripts/_env.sh; mkdir -p "$CSSDIR" "$CSS_HOME/wine/lib/wine/x86_64-windows" "$CSS_HOME/wine/lib/wine/x86_64-unix" \
+    "$WINEPREFIX/drive_c/windows/system32"
+  out=$(CSS_RENDERER=tf2mt CSS_DRY_RUN=1 CSS_TUNED=0 bash scripts/css.sh 2>/dev/null | grep '^game:')
+  # the renderer binds a dummy texture for color correction's lookup (2D bound where the shader wants a cube): blue image
+  case "$out" in *"+mat_colorcorrection 0"*) ;; *) assert_eq "+mat_colorcorrection 0" "$out" "Metal renderer args";; esac
+}

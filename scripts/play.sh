@@ -13,7 +13,11 @@ D120="${CSS_DISPLAY120:-$CSSMT_ROOT/build/tools/display120}"
 if [ -x "$D120" ]; then
   mkdir -p "$CSS_HOME/logs"
   "$D120" restore "$RUN/display-before" >> "$CSS_HOME/logs/session.log" 2>&1
-  [ "${CSS_DISPLAY_120:-1}" = 1 ] && "$D120" set "$RUN/display-before" >> "$CSS_HOME/logs/session.log" 2>&1
+  # fullscreen at another size than the desktop (launch option -w/-h) switches the display itself and misplaces the
+  # game window: switch to that size first
+  size=(); prev=""; for a in "$@"; do case $prev in -w) w=$a ;; -h) h=$a ;; esac; prev=$a; done
+  [ -n "${w:-}" ] && [ -n "${h:-}" ] && size=("$w" "$h")
+  [ "${CSS_DISPLAY_120:-1}" = 1 ] && "$D120" set "$RUN/display-before" "${size[@]}" >> "$CSS_HOME/logs/session.log" 2>&1
 fi
 [ "${CSS_DRY_RUN:-0}" = 1 ] && exit 0   # tests: stop before Steam and the game
 echo $$ > "$RUN/launch-pending"; trap 'rm -f "$RUN/launch-pending"' EXIT   # tells session-helper.sh a launch is in progress
