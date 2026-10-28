@@ -20,3 +20,23 @@ func pickMode(_ modes: [ModeInfo], current: ModeInfo, hz: Double, size: (Int, In
         m.pixelWidth == current.pixelWidth && m.pixelHeight == current.pixelHeight && near(m)
     }
 }
+
+// The mode to go back to: the saved one, found by its values (mode ids are per display and can change).
+func restoreMode(_ modes: [ModeInfo], saved: ModeInfo) -> ModeInfo? {
+    modes.first { m in
+        m.width == saved.width && m.height == saved.height && m.pixelWidth == saved.pixelWidth &&
+        m.pixelHeight == saved.pixelHeight && abs(m.hz - saved.hz) < 0.5
+    }
+}
+
+// State file: "<display uuid> <id> <width> <height> <pixelWidth> <pixelHeight> <hz>", so a mode is only ever put back
+// on the display it was taken from (a laptop may have unplugged its external screen since).
+func savedLine(display: String, mode m: ModeInfo) -> String {
+    "\(display) \(m.id) \(m.width) \(m.height) \(m.pixelWidth) \(m.pixelHeight) \(m.hz)\n"
+}
+func parseSaved(_ s: String) -> (display: String, mode: ModeInfo)? {
+    let f = s.split(whereSeparator: \.isWhitespace).map(String.init)
+    guard f.count == 7, let id = Int32(f[1]), let w = Int(f[2]), let h = Int(f[3]), let pw = Int(f[4]), let ph = Int(f[5]),
+          let hz = Double(f[6]) else { return nil }
+    return (f[0], ModeInfo(id: id, width: w, height: h, pixelWidth: pw, pixelHeight: ph, hz: hz))
+}

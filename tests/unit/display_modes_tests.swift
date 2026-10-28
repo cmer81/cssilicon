@@ -27,5 +27,14 @@ check(pickMode([m(2, 2560, 1440, 5120, 2880, 120), m(9, 2560, 1440, 2560, 1440, 
 check(pickMode([m(7, 1920, 1080, 3840, 2160, 120)], current: cur, hz: 120, size: (1920, 1080)) == nil,
       "test_pick_mode_other_size_missing")
 
+// restore matches the saved mode by its values (mode ids are per display and may change)
+check(restoreMode([m(40, 2560, 1440, 2560, 1440, 160), m(41, 2560, 1440, 5120, 2880, 160)],
+                  saved: m(1, 2560, 1440, 5120, 2880, 160))?.id == 41, "test_restore_by_values_not_id")
+check(restoreMode([m(41, 2560, 1440, 5120, 2880, 144)], saved: m(1, 2560, 1440, 5120, 2880, 160)) == nil,
+      "test_restore_none_when_mode_gone")
+check(parseSaved(savedLine(display: "ABC-123", mode: m(7, 2560, 1440, 5120, 2880, 160))).map { $0.display == "ABC-123" && $0.mode == m(7, 2560, 1440, 5120, 2880, 160) } == true,
+      "test_saved_state_round_trip")
+check(parseSaved("250\n") == nil, "test_old_state_format_rejected")
+
 print(failures == 0 ? "all display mode tests passed" : "\(failures) display mode test(s) failed")
 if failures > 0 { exit(1) }

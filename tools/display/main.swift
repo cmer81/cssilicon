@@ -8,6 +8,7 @@
 // The switch is made for the login session only (.forSession): a logout or reboot also brings the old mode back.
 // Without a matching mode nothing is changed (and no state file is written).
 import CoreGraphics
+import ColorSync   // CGDisplayCreateUUIDFromDisplayID
 import Foundation
 
 func info(_ m: CGDisplayMode) -> ModeInfo {
@@ -25,6 +26,17 @@ func apply(_ mode: CGDisplayMode, _ display: CGDirectDisplayID) -> Bool {
     guard CGBeginDisplayConfiguration(&config) == .success else { return false }
     CGConfigureDisplayWithDisplayMode(config, display, mode, nil)
     return CGCompleteDisplayConfiguration(config, .forSession) == .success
+}
+
+func uuid(_ display: CGDirectDisplayID) -> String {
+    guard let u = CGDisplayCreateUUIDFromDisplayID(display)?.takeRetainedValue() else { return "unknown" }
+    return CFUUIDCreateString(nil, u) as String
+}
+
+func onlineDisplays() -> [CGDirectDisplayID] {
+    var ids = [CGDirectDisplayID](repeating: 0, count: 16), n: UInt32 = 0
+    guard CGGetOnlineDisplayList(16, &ids, &n) == .success else { return [] }
+    return Array(ids.prefix(Int(n)))
 }
 
 func fail(_ message: String) -> Never {
@@ -57,17 +69,25 @@ if args[1] == "set" {
         let (w, h) = size ?? (cur.width, cur.height)
         print("no \(Int(hz.rounded())) Hz mode for \(w)x\(h), unchanged"); exit(0)
     }
-    do { try "\(cur.id)\n".write(toFile: stateFile, atomically: true, encoding: .utf8) }
+    do { try savedLine(display: uuid(display), mode: cur).write(toFile: stateFile, atomically: true, encoding: .utf8) }
     catch { fail("cannot write \(stateFile)") }
     guard apply(mode, display) else { try? FileManager.default.removeItem(atPath: stateFile); fail("switch failed") }
     print("switched \(cur.width)x\(cur.height)@\(Int(cur.hz.rounded())) Hz to \(want.width)x\(want.height)@\(Int(want.hz.rounded())) Hz")
 } else {
-    guard let saved = try? String(contentsOfFile: stateFile, encoding: .utf8) else { exit(0) }
-    guard let id = Int32(saved.trimmingCharacters(in: .whitespacesAndNewlines)),
-          let mode = modes.first(where: { $0.ioDisplayModeID == id }) else {
-        try? FileManager.default.removeItem(atPath: stateFile); fail("saved mode \(saved) no longer exists")
-    }
-    if mode.ioDisplayModeID != current.ioDisplayModeID && !apply(mode, display) { fail("restore failed") }
+    // put the mode back on the display it was taken from, found by UUID (mode ids are per display, and that display
+    // may have been unplugged since); a mode or display that is gone leaves things as they are
+    guard let text = try? String(contentsOfFile: stateFile, encoding: .utf8) else { exit(0) }
     try? FileManager.default.removeItem(atPath: stateFile)
+    guard let saved = parseSaved(text) else { print("unreadable saved mode, nothing restored"); exit(0) }
+    guard let target = onlineDisplays().first(where: { uuid($0) == saved.display }) else {
+        print("display \(saved.display) not connected, nothing restored"); exit(0)
+    }
+    let targetModes = allModes(target)
+    guard let want = restoreMode(targetModes.map(info), saved: saved.mode),
+          let mode = targetModes.first(where: { $0.ioDisplayModeID == want.id }) else {
+        print("saved mode \(saved.mode.width)x\(saved.mode.height)@\(Int(saved.mode.hz.rounded())) Hz no longer offered, nothing restored"); exit(0)
+    }
+    let now = CGDisplayCopyDisplayMode(target)
+    if now?.ioDisplayModeID != mode.ioDisplayModeID && !apply(mode, target) { fail("restore failed") }
     print("restored \(mode.width)x\(mode.height) at \(Int(mode.refreshRate.rounded())) Hz")
 }
