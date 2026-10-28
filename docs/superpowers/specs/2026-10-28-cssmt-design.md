@@ -1,6 +1,29 @@
 # cssmt — Counter-Strike: Source sur Mac Apple Silicon (fork de tf2mt)
 
-Date : 2026-10-28 · Statut : relu (builder check), à valider par le propriétaire
+Date : 2026-10-28 · Statut : validé ; **avenant du 2026-10-28 (soir) ci-dessous, prioritaire sur le reste**
+
+## Avenant — projet public (décision du propriétaire, 2026-10-28 soir)
+
+Ce qui change par rapport au design d'origine :
+
+- **cssmt sera publié** comme projet propre du propriétaire (pas une contribution à tf2mt). Le non-objectif
+  « Publication » est levé.
+- **Aucun réglage taillé pour une seule machine.** Par défaut, le jeu tourne à la définition et à la fréquence
+  actuelles de l'écran principal (`displaymode current`). Le lanceur propose « Resolution » (Native par défaut) et
+  « Refresh rate while playing » (Unchanged par défaut), remplis avec les modes réels de l'écran. Le propriétaire
+  choisira 1920×1080 et 120 Hz pour son M1. Les objectifs « 120 fps en 2560×1440 » et la cible 120 Hz deviennent
+  des réglages du propriétaire, plus des constantes.
+- **Mises à jour** : l'auto-update de tf2mt est à réintroduire, pointé vers le dépôt GitHub du propriétaire (URL à
+  fournir par lui).
+- **App non signée** (pas de compte Apple Developer) : premier lancement par clic droit → Ouvrir, comme tf2mt.
+- **README public en anglais** : prérequis, installation, avertissements VAC, attribution à tf2mt (MIT).
+- **Rendu Metal : décision prise, on y va (phases 2 et 4).** Mesures du 2026-10-28 sur le serveur ZE du propriétaire
+  (M1 8 cœurs GPU) : DXVK ~40 fps (réglages max) puis ~60 fps (Balanced) avec à-coups de compilation ; Metal 0 gel,
+  cache de pipelines persistant, GPU 11–12 ms/image en 1440p et 7,6–8 ms en 1080p (66–72 fps à 120 Hz). Défaut
+  connu à corriger dans le rendu avant de le proposer par défaut : la correction colorimétrique sort bleue (le shader
+  échantillonne un cube là où le jeu lie une texture 2D, le rendu met une texture vide). Contournement actuel :
+  `+mat_colorcorrection 0` quand le rendu Metal est actif.
+- Reste à décider avec le propriétaire : nom et URL du dépôt, date de publication.
 
 ## Intention
 
