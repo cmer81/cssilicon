@@ -7,6 +7,7 @@ Silicon Macs under Wine + Rosetta, with tf2mt's Direct3D 9 → Metal renderer (d
 [tf2mt](https://github.com/HorrorPills/tf2mt): remote `upstream` (fetched with `--no-tags`). Work on branch `cssmt`,
 pushed as `main` of `origin` (github.com/cmer81/cssilicon, public). Area-specific rules live in `.claude/rules/`.
 Design decisions: `docs/superpowers/specs/2026-10-28-cssmt-design.md` — its "Avenant" at the top overrides the rest.
+**What is left to do: `docs/ROADMAP.md`** — check it before proposing work, tick items off as they land.
 
 ## Commands
 
