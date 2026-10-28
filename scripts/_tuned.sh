@@ -12,7 +12,7 @@ fi
 # steam.sh records the session's mode; launching into an existing session follows it.
 CSS_SESSION_SYNC="$CSS_HOME/cache/wine-session-sync"
 follow_session_sync() {
-  if pgrep -f "$CSS_HOME/wine/.*wineserver" >/dev/null && [ -f "$CSS_SESSION_SYNC" ]; then
+  if [ -n "$(wineserver_pid)" ] && [ -f "$CSS_SESSION_SYNC" ]; then
     if [ "$(cat "$CSS_SESSION_SYNC")" = msync ]; then export WINEMSYNC=1; else unset WINEMSYNC; fi
   fi
 }

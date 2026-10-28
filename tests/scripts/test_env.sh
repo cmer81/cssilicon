@@ -43,3 +43,19 @@ test_metal_pipeline_cache_under_css_home() {
   # src/unixlib/render.mm falls back to ~/Games/tf2/cache/tf2mt (never created here), so cssmt must point it at CSS_HOME
   assert_eq "$CSS_HOME/cache/tf2mt" "$TF2MT_CACHE_DIR" "Metal renderer pipeline cache"
 }
+test_wineserver_found_with_regex_chars_in_path() {
+  # a game folder like "CS (old)" must not break wineserver detection (pgrep -f used to treat CSS_HOME as a regex)
+  CSS_HOME="$TEST_TMP/CS (old)+[1]"; export CSS_HOME; . scripts/_env.sh
+  assert_eq function "$(type -t wineserver_pid)" "wineserver_pid is defined"
+  ( exec -a "$CSS_HOME/wine/bin/wineserver" sleep 3 ) & p=$!
+  sleep 0.3
+  found=$(wineserver_pid); kill $p
+  assert_eq "$p" "$found" "our wineserver is found"
+}
+test_other_wineserver_ignored() {
+  tmp_home; . scripts/_env.sh
+  ( exec -a "/Applications/CrossOver.app/wine/bin/wineserver" sleep 3 ) & p=$!
+  sleep 0.3
+  found=$(wineserver_pid | grep -x "$p"); kill $p
+  assert_eq "" "$found" "another Wine's server is not ours"
+}

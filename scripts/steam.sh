@@ -11,7 +11,7 @@ if [ "${1:-}" = --show ]; then   # launcher "Show Steam": bring up the running c
 fi
 # leftovers of a crashed session (orphans of a dead wineserver) stop a new session from starting: sweep first
 "$CSSMT_ROOT/scripts/wine-sweep.sh" >> "$CSS_HOME/logs/session.log" 2>&1
-pgrep -f "$CSS_HOME/wine/.*wineserver" >/dev/null || { mkdir -p "$CSS_HOME/cache"; [ "${WINEMSYNC:-0}" = 1 ] && echo msync > "$CSS_SESSION_SYNC" || echo none > "$CSS_SESSION_SYNC"; }
+[ -n "$(wineserver_pid)" ] || { mkdir -p "$CSS_HOME/cache"; [ "${WINEMSYNC:-0}" = 1 ] && echo msync > "$CSS_SESSION_SYNC" || echo none > "$CSS_SESSION_SYNC"; }
 follow_session_sync
 silent=-silent; [ "${1:-}" = --login ] && silent=
 mkdir -p "$CSS_HOME/logs"; "$WINE" steam.exe $silent -no-cef-sandbox >"$CSS_HOME/logs/steam.log" 2>&1 &

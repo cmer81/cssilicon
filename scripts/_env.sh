@@ -29,6 +29,11 @@ case "${WINEDLLOVERRIDES:-}" in *winedbg*) ;; *) export WINEDLLOVERRIDES="${WINE
 # scripts that merely mention the name)
 css_pids() { pgrep -fl "${CSS_EXE//./\\.}" | awk '$2 ~ /^C:/ {print $1}'; }
 css_running() { [ -n "$(css_pids)" ]; }
+# PID of this runtime's wineserver. Its path is compared literally: CSS_HOME is a folder the player picks and may hold
+# regex characters ("CS (old)"), which made `pgrep -f "$CSS_HOME/..."` miss the server and sweep a live session.
+wineserver_pid() {
+  pgrep -fl wineserver | while read -r pid cmd; do case "$cmd" in "$CSS_HOME/wine/"*wineserver*) echo "$pid" ;; esac; done | head -1
+}
 # Steam client running in the prefix: the program (the command line up to its first " -" option) is steam.exe. The path
 # has spaces ("Program Files (x86)"), so the program can't be read as one awk field.
 steam_running() { pgrep -fl 'steam\.exe' | sed -E 's/^[0-9]+ //; s/ -.*//' | grep -qiE '(^|\\)steam\.exe$'; }

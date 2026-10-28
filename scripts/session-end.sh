@@ -14,7 +14,7 @@ echo $$ > "$LOCK/pid"; trap 'rm -rf "$LOCK"' EXIT
 if css_running; then log "the game is running: nothing to do"; exit 0; fi
 DM="${CSS_DISPLAYMODE:-$CSSMT_ROOT/build/tools/displaymode}"   # display back to its mode from before the session
 [ -x "$DM" ] && [ -f "$RUN/display-before" ] && "$DM" restore "$RUN/display-before" >> "$LOG" 2>&1
-server_up() { pgrep -f "$CSS_HOME/wine/.*wineserver" >/dev/null; }
+server_up() { [ -n "$(wineserver_pid)" ]; }
 log "start (steam running: $(steam_running && echo yes || echo no))"
 if [ -f "$RUN/friends-offline" ]; then
   if steam_running; then (cd "$STEAM_DIR" && "$WINE" steam.exe steam://friends/status/online >/dev/null 2>&1); sleep 3; log "friends set online"; fi

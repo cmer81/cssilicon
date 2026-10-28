@@ -17,7 +17,7 @@ fi
 [ "${1:-}" = --run ] || { echo "usage: $0 --spawn"; exit 2; }
 alive "$RUN/helper.pid" && exit 0
 echo $$ > "$RUN/helper.pid"; trap 'rm -f "$RUN/helper.pid"' EXIT
-server_up() { pgrep -f "$CSS_HOME/wine/.*wineserver" >/dev/null; }
+server_up() { [ -n "$(wineserver_pid)" ]; }
 log "started"
 seen=0; quiet=0; gone=0; started=$(date +%s)
 end_session() {   # $1 = reason. Afterwards keep watching if a new launch already started (quit + Play right away)
