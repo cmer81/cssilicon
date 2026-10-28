@@ -6,23 +6,23 @@ set -u
 cd "$(dirname "$0")/../.."; . scripts/_env.sh
 name=$1; shift
 for kv in "$@"; do export "$kv"; done
-out="$TF2_HOME/logs/night/$name"; rm -rf "$out"; mkdir -p "$out"
+out="$CSS_HOME/logs/night/$name"; rm -rf "$out"; mkdir -p "$out"
 state=$(build/tools/displaystate) || { echo "$name: display asleep/locked ($state)"; exit 1; }
 rcon() { python3 tools/bench/rcon.py "$@" >/dev/null 2>&1; }
-pkill -f 'Team Fortress 2.tf_win64'; while tf2_running; do sleep 1; done
+pkill -f 'Team Fortress 2.tf_win64'; while css_running; do sleep 1; done
 ensure_steam || { echo "$name: Steam did not log in"; exit 1; }
-cp "$TF2DIR/tf/cfg/config.cfg" "$out/config.cfg.orig"
-trap 'cp "$out/config.cfg.orig" "$TF2DIR/tf/cfg/config.cfg"' EXIT
-: > "$TF2DIR/tf/console.log"
-before=$(ls -t "$TF2_HOME/logs/tf2mt" 2>/dev/null | head -1)
+cp "$CSSDIR/tf/cfg/config.cfg" "$out/config.cfg.orig"
+trap 'cp "$out/config.cfg.orig" "$CSSDIR/tf/cfg/config.cfg"' EXIT
+: > "$CSSDIR/tf/console.log"
+before=$(ls -t "$CSS_HOME/logs/tf2mt" 2>/dev/null | head -1)
 TF2_FRIENDS_ONLINE=1 TF2_RENDERER=tf2mt TF2MT_VSYNC=${VSYNC:-1} TF2MT_LATENCY_CSV="$out/latency.csv" \
   scripts/tf2.sh -insecure -condebug -usercon -windowed -noborder -w 1920 -h 1080 +sv_lan 1 +rcon_password tf2mt \
   +ip 127.0.0.1 +sv_rcon_banpenalty 0 +sv_rcon_maxfailures 20 +sv_rcon_minfailures 20 +maxplayers 24 +map koth_harvest_final >/dev/null
-for _ in $(seq 60); do tf2_running && break; sleep 1; done
-( while tf2_running; do
-    if grep -E 'Connecting to matchmaking server|Connected to [0-9]' "$TF2DIR/tf/console.log" | grep -qvE '(127\.0\.0\.1|localhost|loopback)'; then
-      for p in $(tf2_pids); do kill -9 "$p"; done; exit 0; fi; sleep 1; done ) &
-for _ in $(seq 150); do grep -q 'Client reached server_spawn' "$TF2DIR/tf/console.log" && break; tf2_running || break; sleep 2; done
+for _ in $(seq 60); do css_running && break; sleep 1; done
+( while css_running; do
+    if grep -E 'Connecting to matchmaking server|Connected to [0-9]' "$CSSDIR/tf/console.log" | grep -qvE '(127\.0\.0\.1|localhost|loopback)'; then
+      for p in $(css_pids); do kill -9 "$p"; done; exit 0; fi; sleep 1; done ) &
+for _ in $(seq 150); do grep -q 'Client reached server_spawn' "$CSSDIR/tf/console.log" && break; css_running || break; sleep 2; done
 sleep 8
 # heavier presets finish loading later and RCON may not be up yet: retry until bots have actually joined
 for attempt in 1 2 3 4 5 6; do
@@ -35,13 +35,13 @@ done
 echo "bots in game: $(python3 tools/bench/rcon.py status 2>/dev/null | grep -c BOT)" > "$out/bots.txt"
 sleep 10
 if [ "${WARP:-0}" != 0 ]; then
-  ( while tf2_running; do build/tools/cursorwarp 120 30 $([ "$WARP" = events ] && echo events); done ) & fi
-end=$((SECONDS + ${SECS:-240})); k0=$(grep -c ' killed ' "$TF2DIR/tf/console.log")
-while [ $SECONDS -lt $end ] && tf2_running; do rcon 'spec_mode 4' 'spec_next'; sleep 15; done
-echo "kills during measurement: $(( $(grep -c ' killed ' "$TF2DIR/tf/console.log") - k0 ))" > "$out/kills.txt"
-rcon quit; for _ in $(seq 30); do tf2_running || break; sleep 1; done; tf2_running && for p in $(tf2_pids); do kill "$p"; done
+  ( while css_running; do build/tools/cursorwarp 120 30 $([ "$WARP" = events ] && echo events); done ) & fi
+end=$((SECONDS + ${SECS:-240})); k0=$(grep -c ' killed ' "$CSSDIR/tf/console.log")
+while [ $SECONDS -lt $end ] && css_running; do rcon 'spec_mode 4' 'spec_next'; sleep 15; done
+echo "kills during measurement: $(( $(grep -c ' killed ' "$CSSDIR/tf/console.log") - k0 ))" > "$out/kills.txt"
+rcon quit; for _ in $(seq 30); do css_running || break; sleep 1; done; css_running && for p in $(css_pids); do kill "$p"; done
 pkill -f cursorwarp 2>/dev/null; wait 2>/dev/null
-sess=$(ls -t "$TF2_HOME/logs/tf2mt" | head -1)
-[ "$sess" != "$before" ] && cp -R "$TF2_HOME/logs/tf2mt/$sess/." "$out/"
-cp "$TF2DIR/tf/console.log" "$out/console.log"
+sess=$(ls -t "$CSS_HOME/logs/tf2mt" | head -1)
+[ "$sess" != "$before" ] && cp -R "$CSS_HOME/logs/tf2mt/$sess/." "$out/"
+cp "$CSSDIR/tf/console.log" "$out/console.log"
 echo "$name: done $(date +%H:%M:%S), $(cat "$out/kills.txt")"

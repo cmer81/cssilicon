@@ -2,8 +2,8 @@
 # One-click launch (used by /Applications/Team Fortress 2.app): Steam if needed (waits for login), then TF2.
 . "$(dirname "$0")/_env.sh"
 notify() { osascript -e "display notification \"$1\" with title \"Team Fortress 2\"" >/dev/null 2>&1; }
-if tf2_running; then notify "TF2 is already running."; exit 0; fi
-RUN="$TF2_HOME/run"; mkdir -p "$RUN"
+if css_running; then notify "TF2 is already running."; exit 0; fi
+RUN="$CSS_HOME/run"; mkdir -p "$RUN"
 # a session that is still shutting down (quit + Play right away) must finish first, or it would close our Steam
 for _ in $(seq 45); do p=$(cat "$RUN/teardown.lock/pid" 2>/dev/null); [ -n "$p" ] && kill -0 "$p" 2>/dev/null || break; sleep 1; done
 echo $$ > "$RUN/launch-pending"; trap 'rm -f "$RUN/launch-pending"' EXIT   # tells session-helper.sh a launch is in progress
@@ -22,5 +22,5 @@ if ! steam_running; then
   sleep 5
 fi
 "$CSSMT_ROOT/scripts/tf2.sh" "$@"
-for _ in $(seq 60); do tf2_running && exit 0; sleep 1; done
-notify "TF2 did not start — see $TF2_HOME/logs/tf2.log"; exit 1
+for _ in $(seq 60); do css_running && exit 0; sleep 1; done
+notify "TF2 did not start — see $CSS_HOME/logs/tf2.log"; exit 1

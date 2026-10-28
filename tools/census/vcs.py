@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Extract every shader combo from Valve's .vcs containers (version 6) inside hl2_misc_dir.vpk.
 
-Usage: vcs.py <TF2DIR> <corpus_out_dir> [manifest.json.gz]
+Usage: vcs.py <CSSDIR> <corpus_out_dir> [manifest.json.gz]
 Writes <fnv1a64>.{vs,ps}.bin (same naming/hash as tools/trace census capture) and a manifest
 {vcs file: {"static": n, "combos": [[static_id, dynamic_id, hash], ...]}} for pre-warming.
 

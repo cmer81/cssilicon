@@ -1,7 +1,7 @@
 #!/bin/bash
 # Per-module fps cost on the benchmark demo (uncapped): Medium preset with one module group set back to Low each run.
 cd "$(dirname "$0")/../.."; . scripts/_env.sh
-OV="$TF2DIR/tf/cfg/overrides/modules.cfg"; mkdir -p "$(dirname "$OV")"
+OV="$CSSDIR/tf/cfg/overrides/modules.cfg"; mkdir -p "$(dirname "$OV")"
 [ -f "$OV" ] && cp "$OV" /tmp/tf2mt-modules.cfg.orig
 orig=$(scripts/mastercomfig.sh status | sed -E 's/.*preset=([a-z]+).*/\1/')
 cleanup() { rm -f "$OV"; [ -f /tmp/tf2mt-modules.cfg.orig ] && cp /tmp/tf2mt-modules.cfg.orig "$OV"; scripts/mastercomfig.sh set "$orig" >/dev/null 2>&1; echo "restored preset $orig, overrides removed"; }

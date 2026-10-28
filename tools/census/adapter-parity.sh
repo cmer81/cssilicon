@@ -10,10 +10,10 @@ win() { echo "Z:${1//\//\\}"; }
 make -s probe frontend unixlib >/dev/null 2>&1
 scripts/layer-install.sh >/dev/null
 trap 'scripts/layer-uninstall.sh >/dev/null' EXIT
-cp build/tools/probe.exe "$TF2_HOME/cache/probe.exe"
-"$WINE" "$(win "$TF2_HOME/cache/probe.exe")" tf2mt.dll "$(win "$O/tf2mt.tsv")" "$(win "$CSSMT_ROOT/tests/golden/adapter_queries.tsv")" >"$O/tf2mt.log" 2>&1 &
+cp build/tools/probe.exe "$CSS_HOME/cache/probe.exe"
+"$WINE" "$(win "$CSS_HOME/cache/probe.exe")" tf2mt.dll "$(win "$O/tf2mt.tsv")" "$(win "$CSSMT_ROOT/tests/golden/adapter_queries.tsv")" >"$O/tf2mt.log" 2>&1 &
 pid=$!; n=0
 while kill -0 $pid 2>/dev/null && [ $n -lt 120 ]; do sleep 1; n=$((n + 1)); done
 kill -0 $pid 2>/dev/null && { echo "probe timed out"; kill $pid; exit 2; }
 [ -s "$O/tf2mt.tsv" ] || { echo "no probe output"; cat "$O/tf2mt.log" | head; exit 2; }
-.venv/bin/python tools/census/check_parity.py "$O/tf2mt.tsv" "$TF2_HOME/logs/census" "${1:-caps2}"
+.venv/bin/python tools/census/check_parity.py "$O/tf2mt.tsv" "$CSS_HOME/logs/census" "${1:-caps2}"

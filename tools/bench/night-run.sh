@@ -6,18 +6,18 @@ set -u
 cd "$(dirname "$0")/../.."; . scripts/_env.sh
 name=$1; shift
 for kv in "$@"; do export "$kv"; done
-out="$TF2_HOME/logs/night/$name"; rm -rf "$out"; mkdir -p "$out"
+out="$CSS_HOME/logs/night/$name"; rm -rf "$out"; mkdir -p "$out"
 state=$(build/tools/displaystate) || { echo "$name: display asleep/locked ($state)"; exit 1; }
-tf2_running && { echo "$name: TF2 already running"; exit 1; }
-before=$(ls -t "$TF2_HOME/logs/tf2mt" 2>/dev/null | head -1)
+css_running && { echo "$name: TF2 already running"; exit 1; }
+before=$(ls -t "$CSS_HOME/logs/tf2mt" 2>/dev/null | head -1)
 if [ "${WARP:-0}" != 0 ]; then
-  ( for _ in $(seq 90); do tf2_running && break; sleep 1; done; sleep 20
-    while tf2_running; do build/tools/cursorwarp 120 30 $([ "$WARP" = events ] && echo events); done ) &
+  ( for _ in $(seq 90); do css_running && break; sleep 1; done; sleep 20
+    while css_running; do build/tools/cursorwarp 120 30 $([ "$WARP" = events ] && echo events); done ) &
 fi
 TF2_RENDERER=tf2mt TF2MT_VSYNC=${VSYNC:-1} TF2MT_LATENCY_CSV="$out/latency.csv" DEMO=1 \
   tools/census/tf2mt-smoke.sh "night-$name" >/dev/null 2>&1
 wait
-sess=$(ls -t "$TF2_HOME/logs/tf2mt" | head -1)
-[ "$sess" != "$before" ] && cp -R "$TF2_HOME/logs/tf2mt/$sess/." "$out/"
-cp "$TF2_HOME/logs/night-$name/console.log" "$out/console.log" 2>/dev/null
+sess=$(ls -t "$CSS_HOME/logs/tf2mt" | head -1)
+[ "$sess" != "$before" ] && cp -R "$CSS_HOME/logs/tf2mt/$sess/." "$out/"
+cp "$CSS_HOME/logs/night-$name/console.log" "$out/console.log" 2>/dev/null
 echo "$name: done $(date +%H:%M:%S)"

@@ -1,16 +1,16 @@
 #!/bin/bash
-# Pack the Wine runtime ($TF2_HOME/wine) as a tf2mt release asset with the ORIGINAL winemac.so
+# Pack the Wine runtime ($CSS_HOME/wine) as a tf2mt release asset with the ORIGINAL winemac.so
 # (the mouse patch is applied on each user's machine by setup.sh). Prints URL/SHA lines for config/release.conf.
 set -euo pipefail
 . "$(dirname "$0")/_env.sh"
 out="$CSSMT_ROOT/build/release"; mkdir -p "$out"
-ver="wine$("$WINE" --version | sed 's/wine-//; s/ .*//')-$(cat "$TF2_HOME/wine/version" 2>/dev/null || echo x)"
+ver="wine$("$WINE" --version | sed 's/wine-//; s/ .*//')-$(cat "$CSS_HOME/wine/version" 2>/dev/null || echo x)"
 name="tf2mt-runtime-$ver.tar.xz"
 stage="$(mktemp -d)"; trap 'rm -rf "$stage"' EXIT
-cp -cR "$TF2_HOME/wine" "$stage/wine"              # APFS clone: instant, no extra space
-orig="$TF2_HOME/backups/winemac.so.orig"
+cp -cR "$CSS_HOME/wine" "$stage/wine"              # APFS clone: instant, no extra space
+orig="$CSS_HOME/backups/winemac.so.orig"
 if [ -f "$orig" ]; then cp "$orig" "$stage/wine/lib/wine/x86_64-unix/winemac.so"; fi
-TF2_HOME="$stage" /bin/bash "$CSSMT_ROOT/tools/wine-patches/winemac_warp_nodiscard.sh" status | grep -q '^original' \
+CSS_HOME="$stage" /bin/bash "$CSSMT_ROOT/tools/wine-patches/winemac_warp_nodiscard.sh" status | grep -q '^original' \
   || { echo "staged winemac.so is not the original build — refusing to package"; exit 1; }
 cp "$CSSMT_ROOT/THIRD_PARTY.md" "$stage/wine/THIRD_PARTY.md"
 echo "packing $name (xz, may take a few minutes)…"

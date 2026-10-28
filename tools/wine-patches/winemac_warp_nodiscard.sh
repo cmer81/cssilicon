@@ -3,16 +3,16 @@
 # warps. Uses only tools that ship with macOS (no Python / developer tools needed).
 #
 # Wine's -[WineApplicationController setCursorPosition:] (dlls/winemac.drv/cocoa_app.m) discards all queued
-# mouse-move events and ignores every event timestamped before the warp. TF2 recentres the cursor every frame,
+# mouse-move events and ignores every event timestamped before the warp. the game recentres the cursor every frame,
 # so ~2/3 of mouse motion was dropped: camera updated ~40x/s at 120 fps (measured, docs/mouse-input.md).
 # Patch (verified against original bytes first):
 #   0x8399  movsd %xmm0,0x128(%r15)   (lastSetCursorPositionTime = uptime)  -> 9-byte NOP
 #   0x848b  movl  $0x1800,%edx        (discard mask MOUSE_MOVED_*)          -> movl $0,%edx
 # Usage: winemac_warp_nodiscard.sh apply|revert|status
 set -u
-TF2_HOME="${TF2_HOME:-$HOME/Games/tf2}"
-SO="$TF2_HOME/wine/lib/wine/x86_64-unix/winemac.so"
-BACKUP="$TF2_HOME/backups/winemac.so.orig"
+CSS_HOME="${CSS_HOME:-$HOME/Games/css}"
+SO="$CSS_HOME/wine/lib/wine/x86_64-unix/winemac.so"
+BACKUP="$CSS_HOME/backups/winemac.so.orig"
 # offset original patched
 PATCHES=("33689 f2410f118728010000 0f1f80000000006690"   # 0x8399
          "33931 ba00180000 ba00000000")                   # 0x848b

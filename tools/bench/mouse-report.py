@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """mouse-report.py <tag>: seconds with camera motion; reports camera updates/s while moving."""
 import sys, pandas as pd
-t=sys.argv[1]; import os; f=pd.read_csv(os.path.join(os.environ.get('TF2_HOME', os.path.expanduser('~/Games/tf2')), f'logs/runs/{t}/frames-{t}.csv'))
+t=sys.argv[1]; import os; f=pd.read_csv(os.path.join(os.environ.get('CSS_HOME', os.path.expanduser('~/Games/tf2')), f'logs/runs/{t}/frames-{t}.csv'))
 f['s']=(f.t_ms//1000).astype(int)
 g=f.groupby('s').agg(fps=('frame','count'),cam=('cam_changed',lambda x:(x==1).sum()))
 mv=g[(g.cam>5)&(g.fps>60)]

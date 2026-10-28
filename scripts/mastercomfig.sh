@@ -2,11 +2,11 @@
 # mastercomfig graphics presets (https://github.com/mastercomfig/mastercomfig), used by the launcher.
 #   scripts/mastercomfig.sh status          -> "installed=<yes|no> preset=<name|none> own=<yes|no> pending=<yes|no>"
 #   scripts/mastercomfig.sh set <preset>    -> low | balanced | medium | high | ultra (also: destitute, custom)
-#   scripts/mastercomfig.sh set none        -> mastercomfig off: its vpks (base and addons) move to $TF2_HOME/config/
+#   scripts/mastercomfig.sh set none        -> mastercomfig off: its vpks (base and addons) move to $CSS_HOME/config/
 #                                              mastercomfig-off and come back, without a download, when a preset is picked
 #   scripts/mastercomfig.sh auto            -> before each launch: installs Balanced on a brand-new install only
 # own=yes: the player has their own autoexec.cfg (tf/cfg, or a folder in tf/custom). pending=yes: `auto` would install
-# Balanced on the next launch. `auto` decides once per game folder (marker in $TF2_HOME/config): it never reinstalls
+# Balanced on the next launch. `auto` decides once per game folder (marker in $CSS_HOME/config): it never reinstalls
 # mastercomfig the player removed, and skips it for a game that has already run (tf/cfg/config.cfg) or has its own
 # config. Before this (v0.3.3 and older) the launcher reinstalled it whenever setup_hook.cfg had no preset line.
 # "balanced" (tf2mt): mastercomfig Medium with its four costliest module groups at their Low level (shadows, water,
@@ -18,8 +18,8 @@
 # the latest GitHub release into tf/custom first if it is missing. Takes effect the next time TF2 starts.
 set -u
 . "$(dirname "$0")/_env.sh"
-CUSTOM="$TF2DIR/tf/custom"
-OVR="$TF2DIR/tf/cfg/overrides/modules.cfg"; MARK="// tf2mt balanced preset"
+CUSTOM="$CSSDIR/tf/custom"
+OVR="$CSSDIR/tf/cfg/overrides/modules.cfg"; MARK="// tf2mt balanced preset"
 balanced_on() { [ -f "$OVR" ] && grep -qF "$MARK" "$OVR"; }
 balanced_off() {   # remove tf2mt's modules.cfg (put the user's own back if we had moved it aside)
   balanced_on && rm -f "$OVR"
@@ -27,9 +27,9 @@ balanced_off() {   # remove tf2mt's modules.cfg (put the user's own back if we h
   return 0
 }
 BASE="$CUSTOM/mastercomfig-base.vpk"
-CFG="$TF2DIR/tf/cfg"
-DONE="$TF2_HOME/config/mastercomfig-auto-done"
-PARK="$TF2_HOME/config/mastercomfig-off"   # mastercomfig's vpks while it is off
+CFG="$CSSDIR/tf/cfg"
+DONE="$CSS_HOME/config/mastercomfig-auto-done"
+PARK="$CSS_HOME/config/mastercomfig-off"   # mastercomfig's vpks while it is off
 
 own_config() {   # the player's own autoexec, outside mastercomfig's folders
   [ -f "$CFG/autoexec.cfg" ] && return 0

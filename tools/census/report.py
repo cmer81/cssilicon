@@ -2,7 +2,7 @@
 """Census report (PLAN.md P1 / M1): merge census runs + analyse the shader corpus → docs/census-report.md.
 
 Usage: report.py <census_root> <corpus_dir> <out.md>
-  census_root: $TF2_HOME/logs/census (one sub-directory per variant: census-<tag>.tsv, .threads.tsv, caps-<tag>.bin)
+  census_root: $CSS_HOME/logs/census (one sub-directory per variant: census-<tag>.tsv, .threads.tsv, caps-<tag>.bin)
   corpus_dir:  content-addressed shader bytecode (<fnv64>.vs.bin / .ps.bin)
 Enum names come from mingw-w64's d3d9types.h (public Direct3D 9 headers). The shader decoder follows the public
 SM2/SM3 token format (instruction token: opcode bits 0-15, length bits 24-27; parameter tokens: register number
