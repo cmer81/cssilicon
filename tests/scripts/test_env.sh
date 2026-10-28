@@ -38,3 +38,8 @@ test_exe_names() {
   assert_eq cstrike.exe "$CSS_STUB" "stub started by Steam (seen 2026-10-28)"
   assert_eq cstrike_win64.exe "$CSS_EXE" "64-bit game process (seen 2026-10-28)"
 }
+test_metal_pipeline_cache_under_css_home() {
+  unset TF2MT_CACHE_DIR; tmp_home; . scripts/_env.sh
+  # src/unixlib/render.mm falls back to ~/Games/tf2/cache/tf2mt (never created here), so cssmt must point it at CSS_HOME
+  assert_eq "$CSS_HOME/cache/tf2mt" "$TF2MT_CACHE_DIR" "Metal renderer pipeline cache"
+}

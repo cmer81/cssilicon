@@ -32,6 +32,7 @@ if [ "$renderer" = dxvk ] && [ "${CSS_FRAMELOG:-0}" = 1 ] && [ -f "$CSSMT_ROOT/b
   renderer=dxvk-logged
 fi
 if [ "$renderer" = tf2mt ]; then
+  mkdir -p "$TF2MT_CACHE_DIR"
   if "$CSSMT_ROOT/scripts/layer-install.sh" >/dev/null 2>&1; then
     sess="$CSS_HOME/logs/tf2mt/$(date +%Y%m%d-%H%M%S)"; mkdir -p "$sess"
     ls -dt "$CSS_HOME/logs/tf2mt"/*/ 2>/dev/null | tail -n +6 | xargs rm -rf 2>/dev/null   # keep the last 5 sessions

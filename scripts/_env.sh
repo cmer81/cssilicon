@@ -15,6 +15,9 @@ export CSS_GAME=cstrike
 export CSSDIR="$STEAM_DIR/steamapps/common/Counter-Strike Source"
 export CSS_STUB="${CSS_STUB:-cstrike.exe}"
 export CSS_EXE="${CSS_EXE:-cstrike_win64.exe}"
+# Metal renderer (tf2mt) pipeline cache: without this it falls back to ~/Games/tf2/cache/tf2mt, which doesn't exist
+# here, and the cache that removes compile hitches in later sessions was never written
+export TF2MT_CACHE_DIR="${TF2MT_CACHE_DIR:-$CSS_HOME/cache/tf2mt}"
 export DYLD_FALLBACK_LIBRARY_PATH="$CSS_HOME/wine/lib:/usr/lib"   # FreeType etc. (lost if launched via SIP binaries like nohup)
 export WINEDEBUG="${WINEDEBUG:--all}"
 export MVK_CONFIG_LOG_LEVEL="${MVK_CONFIG_LOG_LEVEL:-0}"
