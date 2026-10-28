@@ -1,9 +1,12 @@
-// display120 (main.swift: top-level code must live here when several files are compiled): switch the main display to 120 Hz for a game session and put the previous mode back afterwards.
-//   display120 set <statefile> [<w> <h>]  remember the current mode in <statefile>, switch to 120 Hz: same size, or
-//                                    <w>x<h> at 1x pixels when the game runs fullscreen at another size
-//   display120 restore <statefile>   switch back to the remembered mode and delete <statefile> (no file: nothing to do)
+// displaymode (main.swift: top-level code must live here when several files are compiled): the main display's mode
+// for a game session.
+//   displaymode current                              print "<width> <height> <hz>" (points, rounded Hz)
+//   displaymode set <statefile> <hz|current> [<w> <h>]  remember the current mode in <statefile>, then switch to <hz>:
+//                                                    same size, or <w>x<h> at 1x pixels (the mode Source's fullscreen
+//                                                    sets itself at another size than the desktop)
+//   displaymode restore <statefile>                  switch back to the remembered mode, delete <statefile>
 // The switch is made for the login session only (.forSession): a logout or reboot also brings the old mode back.
-// Without a 120 Hz mode of the same size nothing is changed (and no state file is written).
+// Without a matching mode nothing is changed (and no state file is written).
 import CoreGraphics
 import Foundation
 
@@ -25,35 +28,39 @@ func apply(_ mode: CGDisplayMode, _ display: CGDirectDisplayID) -> Bool {
 }
 
 func fail(_ message: String) -> Never {
-    FileHandle.standardError.write(Data("display120: \(message)\n".utf8)); exit(1)
+    FileHandle.standardError.write(Data("displaymode: \(message)\n".utf8)); exit(1)
 }
 
 let args = CommandLine.arguments
-guard (args.count == 3 || (args.count == 5 && args[1] == "set")), ["set", "restore"].contains(args[1]) else {
-    print("usage: display120 set <statefile> [<w> <h>] | restore <statefile>"); exit(2)
-}
-let size: (Int, Int)? = args.count == 5 ? Int(args[3]).flatMap { w in Int(args[4]).map { (w, $0) } } : nil
-let stateFile = args[2]
 let display = CGMainDisplayID()
 guard let current = CGDisplayCopyDisplayMode(display) else { fail("cannot read the current display mode") }
+if args.count == 2 && args[1] == "current" {
+    print("\(current.width) \(current.height) \(Int(current.refreshRate.rounded()))"); exit(0)
+}
+guard (args.count == 3 && args[1] == "restore") || ((args.count == 4 || args.count == 6) && args[1] == "set") else {
+    print("usage: displaymode current | set <statefile> <hz|current> [<w> <h>] | restore <statefile>"); exit(2)
+}
+let stateFile = args[2]
+let size: (Int, Int)? = args.count == 6 ? Int(args[4]).flatMap { w in Int(args[5]).map { (w, $0) } } : nil
 let modes = allModes(display)
 
 if args[1] == "set" {
     var count: UInt32 = 0
     CGGetActiveDisplayList(0, nil, &count)
-    if count > 1 { FileHandle.standardError.write(Data("display120: several displays active, switching main only\n".utf8)) }
+    if count > 1 { FileHandle.standardError.write(Data("displaymode: several displays active, switching main only\n".utf8)) }
     let cur = info(current)
+    guard let hz = args[3] == "current" ? cur.hz : Double(args[3]) else { fail("bad refresh rate \(args[3])") }
     let sameSize = size.map { $0.0 == cur.width && $0.1 == cur.height } ?? true
-    if abs(cur.hz - 120) < 0.5 && sameSize { print("already at 120 Hz (\(cur.width)x\(cur.height))"); exit(0) }
-    guard let want = pickMode(modes.map(info), current: cur, hz: 120, size: size),
+    if abs(cur.hz - hz) < 0.5 && sameSize { print("already \(cur.width)x\(cur.height)@\(Int(cur.hz.rounded())) Hz"); exit(0) }
+    guard let want = pickMode(modes.map(info), current: cur, hz: hz, size: size),
           let mode = modes.first(where: { $0.ioDisplayModeID == want.id }) else {
         let (w, h) = size ?? (cur.width, cur.height)
-        print("no 120 Hz mode for \(w)x\(h), unchanged"); exit(0)
+        print("no \(Int(hz.rounded())) Hz mode for \(w)x\(h), unchanged"); exit(0)
     }
     do { try "\(cur.id)\n".write(toFile: stateFile, atomically: true, encoding: .utf8) }
     catch { fail("cannot write \(stateFile)") }
-    guard apply(mode, display) else { try? FileManager.default.removeItem(atPath: stateFile); fail("switch to 120 Hz failed") }
-    print("switched \(cur.width)x\(cur.height)@\(Int(cur.hz.rounded())) Hz to \(want.width)x\(want.height)@120 Hz")
+    guard apply(mode, display) else { try? FileManager.default.removeItem(atPath: stateFile); fail("switch failed") }
+    print("switched \(cur.width)x\(cur.height)@\(Int(cur.hz.rounded())) Hz to \(want.width)x\(want.height)@\(Int(want.hz.rounded())) Hz")
 } else {
     guard let saved = try? String(contentsOfFile: stateFile, encoding: .utf8) else { exit(0) }
     guard let id = Int32(saved.trimmingCharacters(in: .whitespacesAndNewlines)),

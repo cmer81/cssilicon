@@ -115,9 +115,9 @@ test-translate: translate-tools
 
 .PHONY: translate-tools test-translate
 
-# 120 Hz display switch for game sessions (scripts/play.sh, scripts/session-end.sh)
-display120: build/tools/display120
-build/tools/display120: tools/display/main.swift tools/display/DisplayModes.swift
+# display mode for game sessions: refresh rate / resolution (scripts/play.sh, css.sh, session-end.sh)
+displaymode: build/tools/displaymode
+build/tools/displaymode: tools/display/main.swift tools/display/DisplayModes.swift
 	@mkdir -p build/tools
 	swiftc -O -target arm64-apple-macos13 -o $@ tools/display/DisplayModes.swift tools/display/main.swift
 test-display: tools/display/DisplayModes.swift tests/unit/display_modes_tests.swift

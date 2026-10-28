@@ -1,6 +1,6 @@
 #!/bin/bash
 # Build cssmt.app (native SwiftUI launcher) and install it to /Applications (--no-install to only build).
-# The app is self-contained: it bundles the cssmt scripts/configs/patch tool, the display120 tool and an original
+# The app is self-contained: it bundles the cssmt scripts/configs/patch tool, the displaymode tool and an original
 # icon. No Valve content is bundled — CS:S library art is loaded at runtime from the user's own install.
 set -euo pipefail
 cd "$(dirname "$0")"; ROOT="$(cd ../.. && pwd)"
@@ -10,12 +10,12 @@ rm -rf "$OUT"; mkdir -p "$APP/Contents/MacOS" "$RES/cssmt/tools"
 swiftc -O -parse-as-library -target arm64-apple-macos13 CSSLauncher.swift -o "$APP/Contents/MacOS/cssmt"
 "$ROOT/.venv/bin/python" make_icon.py "$OUT/cssmt.iconset" "$OUT/icon-preview.png"
 iconutil -c icns "$OUT/cssmt.iconset" -o "$RES/cssmt.icns"
-# bundled cssmt: only what the launcher runs (scripts, configs, wine patch tool, display120, licence notes)
+# bundled cssmt: only what the launcher runs (scripts, configs, wine patch tool, displaymode, licence notes)
 cp -R "$ROOT/scripts" "$ROOT/config" "$RES/cssmt/"
 cp -R "$ROOT/tools/wine-patches" "$RES/cssmt/tools/"
 cp "$ROOT/THIRD_PARTY.md" "$ROOT/LICENSE" "$RES/cssmt/"
-make -C "$ROOT" -s display120
-mkdir -p "$RES/cssmt/build/tools"; cp "$ROOT/build/tools/display120" "$RES/cssmt/build/tools/"
+make -C "$ROOT" -s displaymode
+mkdir -p "$RES/cssmt/build/tools"; cp "$ROOT/build/tools/displaymode" "$RES/cssmt/build/tools/"
 # experimental Metal renderer (tf2mt): prebuilt layer files, installed per session by scripts/css.sh (CSS_RENDERER=tf2mt)
 if make -C "$ROOT" -s frontend unixlib >/dev/null 2>&1; then
   mkdir -p "$RES/cssmt/build/tf2mt"

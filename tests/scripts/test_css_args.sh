@@ -1,23 +1,36 @@
-# scripts/css.sh launch arguments (CSS_DRY_RUN=1 prints the game command line instead of starting it)
-css_cmd() { tmp_home; . scripts/_env.sh; mkdir -p "$CSSDIR"; CSS_DRY_RUN=1 CSS_TUNED=0 bash scripts/css.sh "$@" 2>/dev/null | grep '^game:'; }
-test_refresh_follows_display_option() {
-  out=$(CSS_DISPLAY_120=1 css_cmd)
-  case "$out" in *"-refresh 120"*) ;; *) assert_eq "-refresh 120 in args" "$out" "fullscreen must ask for 120 Hz (the engine takes the first, 60 Hz, mode otherwise)";; esac
+# scripts/css.sh launch arguments (CSS_DRY_RUN=1 prints the game command line instead of starting it).
+# CSS_DISPLAYMODE = a fake displaymode tool whose `current` prints "3008 1692 144" (a display that isn't the owner's).
+css_cmd() {
+  tmp_home; . scripts/_env.sh; mkdir -p "$CSSDIR"
+  [ -n "${NO_TOOL:-}" ] || { printf '#!/bin/bash\n[ "$1" = current ] && echo "3008 1692 144"\n' > "$TEST_TMP/dm"; chmod +x "$TEST_TMP/dm"; }
+  CSS_DISPLAYMODE="${NO_TOOL:-$TEST_TMP/dm}" CSS_DRY_RUN=1 CSS_TUNED=0 bash scripts/css.sh "$@" 2>/dev/null | grep '^game:'
 }
-test_no_refresh_when_display_option_off() {
-  out=$(CSS_DISPLAY_120=0 css_cmd)
-  case "$out" in *"-refresh"*) assert_eq "no -refresh" "$out" "display option off";; esac
-  case "$out" in *"-w 2560 -h 1440"*) ;; *) assert_eq "-w 2560 -h 1440" "$out" "window size";; esac
+has() { case "$1" in *"$2"*) ;; *) assert_eq "$2" "$1" "$3";; esac; }
+hasnt() { case "$1" in *"$2"*) assert_eq "no $2" "$1" "$3";; esac; }
+test_native_size_and_refresh_from_display() {
+  out=$(css_cmd)
+  has "$out" "-w 3008 -h 1692" "native size of the display, whatever it is"
+  has "$out" "-refresh 144" "fullscreen at the display's rate (the engine would take the first, 60 Hz, mode)"
+}
+test_resolution_setting() {
+  out=$(CSS_WIDTH=1920 CSS_HEIGHT=1080 css_cmd)
+  has "$out" "-w 1920 -h 1080" "launcher resolution setting"
 }
 test_user_resolution_wins() {
-  out=$(css_cmd -w 1920 -h 1080)
-  case "$out" in *"-w 2560"*) assert_eq "only the player's -w/-h" "$out" "Source takes the first -w, so ours must not be there";; esac
-  case "$out" in *"-w 1920 -h 1080"*) ;; *) assert_eq "-w 1920 -h 1080" "$out" "player's size kept";; esac
+  out=$(CSS_WIDTH=1600 CSS_HEIGHT=900 css_cmd -w 1920 -h 1080)
+  hasnt "$out" "-w 1600" "Source takes the first -w, so ours must not be there"
+  hasnt "$out" "-w 3008" "nor the native size"
+  has "$out" "-w 1920 -h 1080" "player's size kept"
+}
+test_without_display_tool() {
+  out=$(NO_TOOL=/nonexistent css_cmd)
+  hasnt "$out" "-refresh" "no tool: the game decides"
+  hasnt "$out" "-w " "no tool: the game decides"
 }
 test_metal_renderer_turns_color_correction_off() {
   tmp_home; . scripts/_env.sh; mkdir -p "$CSSDIR" "$CSS_HOME/wine/lib/wine/x86_64-windows" "$CSS_HOME/wine/lib/wine/x86_64-unix" \
     "$WINEPREFIX/drive_c/windows/system32"
-  out=$(CSS_RENDERER=tf2mt CSS_DRY_RUN=1 CSS_TUNED=0 bash scripts/css.sh 2>/dev/null | grep '^game:')
+  out=$(CSS_RENDERER=tf2mt CSS_DISPLAYMODE=/nonexistent CSS_DRY_RUN=1 CSS_TUNED=0 bash scripts/css.sh 2>/dev/null | grep '^game:')
   # the renderer binds a dummy texture for color correction's lookup (2D bound where the shader wants a cube): blue image
-  case "$out" in *"+mat_colorcorrection 0"*) ;; *) assert_eq "+mat_colorcorrection 0" "$out" "Metal renderer args";; esac
+  has "$out" "+mat_colorcorrection 0" "Metal renderer args"
 }

@@ -77,13 +77,19 @@ apply_mic() {
 # graphics preset: Balanced once on a brand-new install (scripts/presets.sh); never for benchmark runs
 [ "${CSS_TUNED:-1}" = 1 ] && "$CSSMT_ROOT/scripts/presets.sh" auto >/dev/null 2>&1
 
-# game window: 2560x1440 by default (the M1 can't drive the 5K backing store at 120 fps)
+# game size and rate follow the display (scripts/play.sh has already switched it if the launcher asked for a resolution
+# or a refresh rate), so nothing is tied to one Mac. Fullscreen must be given the rate: the engine otherwise takes the
+# first mode of that size, the 60 Hz one under the Metal renderer. A size in the launch options (-w/-h) wins: Source
+# reads the first -w/-h only. Without the displaymode tool the game's own video settings decide.
+DM="${CSS_DISPLAYMODE:-$CSSMT_ROOT/build/tools/displaymode}"
+cur=(); [ -x "$DM" ] && read -r -a cur <<< "$("$DM" current 2>/dev/null)"
 game_args=(-novid -nojoy -nosteamcontroller -nohltv)
-# ...unless the player gave a size in the launch options: Source reads the first -w/-h only
-case " $* " in *" -w "*|*" -h "*) ;; *) game_args+=(-w "${CSS_WIDTH:-2560}" -h "${CSS_HEIGHT:-1440}") ;; esac
-# fullscreen takes the first mode of the requested size, which is the 60 Hz one under the Metal renderer (modes are
-# listed by rising refresh rate): ask for the rate scripts/play.sh switched the display to
-[ "${CSS_DISPLAY_120:-1}" = 1 ] && game_args+=(-refresh 120)
+case " $* " in
+  *" -w "*|*" -h "*) ;;
+  *) if [ -n "${CSS_WIDTH:-}" ] && [ -n "${CSS_HEIGHT:-}" ]; then game_args+=(-w "$CSS_WIDTH" -h "$CSS_HEIGHT")
+     elif [ ${#cur[@]} = 3 ]; then game_args+=(-w "${cur[0]}" -h "${cur[1]}"); fi ;;
+esac
+[ ${#cur[@]} = 3 ] && game_args+=(-refresh "${cur[2]}")
 # Metal renderer: color correction comes out blue (the renderer binds a dummy texture where the shader samples a cube
 # and the game bound a 2D one), so it is turned off for the session. It is an archived cvar: it stays off afterwards.
 [ "$renderer" = tf2mt ] && game_args+=(+mat_colorcorrection 0)
