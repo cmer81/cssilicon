@@ -221,6 +221,32 @@ struct Pacing: Hashable, Identifiable {
     }
 }
 
+/// What the main display offers, for the Resolution and Refresh rate settings (scripts/play.sh switches to the choice
+/// with build/tools/displaymode; nothing is tied to one Mac).
+enum DisplayOptions {
+    static var modes: [CGDisplayMode] {
+        let opts = [kCGDisplayShowDuplicateLowResolutionModes: kCFBooleanTrue] as CFDictionary
+        return (CGDisplayCopyAllDisplayModes(CGMainDisplayID(), opts) as? [CGDisplayMode]) ?? []
+    }
+    static var current: CGDisplayMode? { CGDisplayCopyDisplayMode(CGMainDisplayID()) }
+    /// "1920x1080" sizes (points) that have a 1x mode, the kind Source's fullscreen uses, largest first.
+    static var sizes: [String] {
+        var seen = Set<String>(), out: [String] = []
+        for m in modes.sorted(by: { $0.width * $0.height > $1.width * $1.height })
+        where m.pixelWidth == m.width && m.width >= 1280 {
+            let k = "\(m.width)x\(m.height)"
+            if seen.insert(k).inserted { out.append(k) }
+        }
+        return out
+    }
+    /// Refresh rates (rounded Hz) offered at the current size, highest first.
+    static var rates: [Int] {
+        guard let c = current else { return [] }
+        let r = modes.filter { $0.width == c.width && $0.height == c.height && $0.refreshRate > 0 }.map { Int($0.refreshRate.rounded()) }
+        return Array(Set(r)).sorted(by: >)
+    }
+}
+
 var appVersion: String { Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "dev" }
 var displayRefreshHz: Int { max(NSScreen.main?.maximumFramesPerSecond ?? 60, 30) }
 var displayName: String { NSScreen.main?.localizedName ?? "Display" }
@@ -493,7 +519,7 @@ final class Launcher: ObservableObject {
         }
     }
 
-    func play(pacing: Pacing, hud: Bool, friendsOffline: Bool, metalRenderer: Bool, frameLog: Bool, steamOverlay: Bool, display120: Bool, micUID: String, extraArgs: String) {
+    func play(pacing: Pacing, hud: Bool, friendsOffline: Bool, metalRenderer: Bool, frameLog: Bool, steamOverlay: Bool, resolution: String, refresh: Int, micUID: String, extraArgs: String) {
         guard !launching, !cssRunning else { return }
         refreshChecks()
         guard readyToPlay else { message = "Setup incomplete — see the Setup tab."; return }
@@ -505,7 +531,9 @@ final class Launcher: ObservableObject {
         extra["CSS_RENDERER"] = metalRenderer ? "tf2mt" : "dxvk"
         extra["CSS_FRAMELOG"] = frameLog ? "1" : "0"
         extra["CSS_STEAM_OVERLAY"] = steamOverlay ? "1" : "0"
-        extra["CSS_DISPLAY_120"] = display120 ? "1" : "0"
+        let wh = resolution.split(separator: "x")   // "" = native: the display's own size
+        if wh.count == 2 { extra["CSS_WIDTH"] = String(wh[0]); extra["CSS_HEIGHT"] = String(wh[1]) }
+        if refresh > 0 { extra["CSS_REFRESH"] = String(refresh) }   // 0 = unchanged
         extra["CSS_MIC_UID"] = micUID   // empty: the Mac's default input
         extra["TF2MT_VSYNC"] = pacing.raw == "vsync" ? "1" : "0"   // Metal renderer follows Frame pacing too
         let env = scriptEnv(extra, removing: hud ? [] : ["MTL_HUD_ENABLED"])
@@ -798,7 +826,8 @@ struct ContentView: View {
     @AppStorage("metalRenderer") private var metalRenderer = false   // DXVK until the Metal renderer is validated for CS:S
     @AppStorage("frameLog") private var frameLog = false
     @AppStorage("steamOverlay") private var steamOverlay = false
-    @AppStorage("display120") private var display120 = true
+    @AppStorage("resolution") private var resolution = ""   // "" = native (the display's size), else "1920x1080"
+    @AppStorage("refresh") private var refresh = 0          // 0 = leave the display's refresh rate as it is
     @AppStorage("extraArgs") private var extraArgs = ""
     @AppStorage("micUID") private var micUID = ""     // "" = the Mac's default input
     @AppStorage("micName") private var micName = ""   // shown while the chosen mic is unplugged
@@ -930,9 +959,27 @@ struct ContentView: View {
                 .labelsHidden().frame(width: 250)
             }
             Divider().overlay(Color.white.opacity(0.06))
-            OptionRow(title: "Switch display to 120 Hz while playing",
-                      detail: "Main display back to its own rate when the game exits.",
-                      isOn: $display120)
+            HStack {
+                RowText(title: "Resolution", detail: "Native: the display's own size. Lower sizes run faster on smaller GPUs.")
+                Picker("", selection: $resolution) {
+                    Text("Native (\(DisplayOptions.current.map { "\($0.width)x\($0.height)" } ?? "display"))").tag("")
+                    Divider()
+                    ForEach(DisplayOptions.sizes, id: \.self) { Text($0).tag($0) }
+                    if !resolution.isEmpty && !DisplayOptions.sizes.contains(resolution) { Text(resolution).tag(resolution) }
+                }
+                .labelsHidden().frame(width: 250)
+            }
+            Divider().overlay(Color.white.opacity(0.06))
+            HStack {
+                RowText(title: "Refresh rate while playing", detail: "The display is put back when the game exits.")
+                Picker("", selection: $refresh) {
+                    Text("Unchanged (\(displayRefreshHz) Hz)").tag(0)
+                    Divider()
+                    ForEach(DisplayOptions.rates, id: \.self) { Text("\($0) Hz").tag($0) }
+                    if refresh > 0 && !DisplayOptions.rates.contains(refresh) { Text("\(refresh) Hz").tag(refresh) }
+                }
+                .labelsHidden().frame(width: 250)
+            }
             Divider().overlay(Color.white.opacity(0.06))
             OptionRow(title: "Smooth mouse fix",
                       detail: launcher.mouseFix == .unknown ? "Run Setup first."
@@ -1094,7 +1141,7 @@ struct ContentView: View {
         return Button {
             launcher.play(pacing: Pacing(raw: pacingRaw), hud: metalHUD, friendsOffline: friendsOffline,
                           metalRenderer: metalRenderer, frameLog: frameLog, steamOverlay: steamOverlay && !metalRenderer,
-                          display120: display120, micUID: micUID, extraArgs: extraArgs)
+                          resolution: resolution, refresh: refresh, micUID: micUID, extraArgs: extraArgs)
         } label: {
             HStack(spacing: 12) {
                 if launcher.launching { ProgressView().controlSize(.small).tint(.white) }
