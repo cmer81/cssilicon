@@ -1,8 +1,6 @@
 <!-- prettier-ignore -->
 <div align="center">
 
-<img src="./docs/assets/icon.png" alt="" align="center" height="96" />
-
 # CSSilicon
 
 **Play Counter-Strike: Source on Apple Silicon Macs — smooth, on VAC-secured servers, in one click.**
@@ -13,6 +11,9 @@
 [![License](https://img.shields.io/badge/License-MIT-yellow?style=flat-square)](LICENSE)
 
 [Overview](#overview) • [Getting started](#getting-started) • [Settings](#settings) • [How it works](#how-it-works) • [FAQ](#faq) • [Build from source](#build-from-source)
+
+<img src="./docs/assets/screenshot.jpg" alt="The CSSilicon launcher: game art header, Game / Configs / Setup / Debug tabs, setup checklist, status and Play button" width="800" />
+<br><sub>The game art in the header is read from your own Steam library cache; the app ships none.</sub>
 
 </div>
 

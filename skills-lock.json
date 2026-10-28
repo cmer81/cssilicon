@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "skills": {
+    "axiom-graphics": {
+      "source": "charleswiltgen/axiom",
+      "sourceType": "github",
+      "skillPath": ".claude-plugin/plugins/axiom/skills/axiom-graphics/SKILL.md",
+      "computedHash": "ece854d34612b2946e8784024a7c7c4f57b9d901ee1791864e8fbd32e07c0d3e"
+    }
+  }
+}
