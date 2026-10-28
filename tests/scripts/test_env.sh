@@ -32,3 +32,8 @@ test_steam_running_ignores_webhelper() {
   steam_running; r=$?; kill $p
   assert_eq 1 "$r" "steamwebhelper alone is not Steam"
 }
+test_exe_names() {
+  unset CSS_STUB CSS_EXE; . scripts/_env.sh
+  assert_eq cstrike.exe "$CSS_STUB" "stub started by Steam (seen 2026-10-28)"
+  assert_eq cstrike_win64.exe "$CSS_EXE" "64-bit game process (seen 2026-10-28)"
+}
