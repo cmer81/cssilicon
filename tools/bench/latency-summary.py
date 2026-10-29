@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Summarise tools/bench/latency-ab.sh runs: python3 tools/bench/latency-summary.py base ahead0 ..."""
+"""Summarise tools/bench/latency-ab.sh / latency-css.sh runs: python3 tools/bench/latency-summary.py 1-base 2-drain ..."""
 import os, re, sys, csv
-H = os.path.expanduser("~/Games/tf2/logs")
+H = os.path.join(os.environ.get("CSS_HOME", os.path.expanduser("~/Games/css")), "logs")
 pat = re.compile(r"latency: .*?last (\d+) frames: p50 ([\d.]+) p90 ([\d.]+) p99 ([\d.]+) max ([\d.]+) ms; (\d+) drawables not shown; shown intervals >12.5 ms: (\d+) of (\d+)")
 print(f"{'variant':12s} {'lat p50':>8s} {'lat p90':>8s} {'lat p99':>8s} {'jumps/min':>9s} {'not shown':>9s} {'game fps':>8s}")
 for name in sys.argv[1:]:
