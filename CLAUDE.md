@@ -22,7 +22,8 @@ tools/launcher/build.sh [--no-install]        # CSSilicon.app + CSSilicon-app.zi
 tools/release.sh vX.Y.Z [notes]   # the only way to release (see .claude/rules/release.md)
 ```
 
-Prerequisites: Xcode Command Line Tools only (no Xcode), `brew install mingw-w64`, `.venv` with Pillow (app icon).
+Prerequisites: Xcode Command Line Tools only (no Xcode), `brew install mingw-w64`, `.venv` with Pillow (app icon),
+numpy and pandas (`tools/replay/ssim.py`, `tools/bench/analyze.py`).
 `make test-translate` also runs corpus steps that need a TF2-generated `corpus/` (git-ignored): only the opcode part
 applies to this repo. Run all three `make test-*` targets before committing script, display or launcher changes.
 

@@ -5,7 +5,7 @@
 set -u
 cd "$(dirname "$0")/../.."; . scripts/_env.sh
 MIN=${MIN_SSIM:-0.995}
-T=$TF2_HOME/cache/traces
+T=$CSS_HOME/cache/traces
 fail=0
 while IFS=$'\t' read -r tag frames; do
   case "$tag" in ''|\#*) continue ;; esac

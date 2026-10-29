@@ -10,14 +10,14 @@ cap=$(cd "$(dirname "$1")" && pwd)/$(basename "$1"); prov=$2; shift 2
 dir=$(dirname "$cap")
 win() { echo "Z:${1//\//\\}"; }
 make -s replay >/dev/null
-cp build/tools/replay.exe "$TF2_HOME/cache/replay.exe"
+cp build/tools/replay.exe "$CSS_HOME/cache/replay.exe"
 suffix=$prov${VERIFY:+-verify}
 dumpargs=()
 if [ -n "${DUMP:-}" ]; then mkdir -p "$dir/frames-$prov"; rm -f "$dir/frames-$prov"/*.ppm; dumpargs=(--dump "$DUMP" --dump-dir "$(win "$dir/frames-$prov")"); fi
 case $prov in
   dxvk)
-    cp "$TF2_HOME/wine/share/dxvk/x86_64-windows/d3d9.dll" "$TF2_HOME/cache/d3d9_dxvk.dll"
-    provider=$(win "$TF2_HOME/cache/d3d9_dxvk.dll") ;;
+    cp "$CSS_HOME/wine/share/dxvk/x86_64-windows/d3d9.dll" "$CSS_HOME/cache/d3d9_dxvk.dll"
+    provider=$(win "$CSS_HOME/cache/d3d9_dxvk.dll") ;;
   tf2mt)
     make -s frontend unixlib >/dev/null
     scripts/layer-install.sh >/dev/null
@@ -29,7 +29,7 @@ case $prov in
     rm -f "$dir/unix-$suffix.log" ;;
   *) echo "provider must be dxvk or tf2mt"; exit 2 ;;
 esac
-"$WINE" "$(win "$TF2_HOME/cache/replay.exe")" "$provider" "$(win "$cap")" --report "$(win "$dir/replay-$suffix.txt")" ${dumpargs[@]+"${dumpargs[@]}"} "$@" \
+"$WINE" "$(win "$CSS_HOME/cache/replay.exe")" "$provider" "$(win "$cap")" --report "$(win "$dir/replay-$suffix.txt")" ${dumpargs[@]+"${dumpargs[@]}"} "$@" \
   >"$dir/replay-$suffix.stdout" 2>&1 &
 pid=$!; n=0
 while kill -0 $pid 2>/dev/null && [ $n -lt "${TIMEOUT:-3600}" ]; do sleep 1; n=$((n + 1)); done

@@ -1,6 +1,6 @@
 #!/bin/bash
 # One benchmark run = one fresh CS:S process (upstream PLAN.md F12) playing cstrike/bench.dem in real time.
-#   scripts/bench.sh <tag> <ref> [extra launch args...]
+#   scripts/bench.sh <tag> <ref> [extra launch args...]      DEMO=<name> plays cstrike/<name>.dem instead
 #   <ref>: dxvk  (runtime DXVK 2.4.1 behind the timing proxy)
 #          null  (build/null/d3d9.dll behind the timing proxy: game-only ceiling)
 #          tf2mt (the tf2mt renderer behind the timing proxy; layer installed for the run, removed afterwards)
@@ -11,7 +11,7 @@
 # kept awake with caffeinate, and a run whose display state changed is marked INVALID.
 set -u
 export CSS_TUNED=0   # baselines use exactly the DXVK config given in the environment
-. "$(dirname "$0")/_env.sh"
+. "$(dirname "$0")/_env.sh"; . "$(dirname "$0")/_tuned.sh"
 tag=$1; ref=$2; shift 2
 run="$CSS_HOME/logs/runs/$tag"
 [ -e "$run" ] && { echo "run tag '$tag' already used — pick a fresh one"; exit 1; }
@@ -45,13 +45,17 @@ pgrep -f steamwebhelper >/dev/null || { "$CSSMT_ROOT/scripts/steam.sh"; }
 until tail -n 30 "$STEAM_DIR/logs/connection_log.txt" 2>/dev/null | grep -q 'Logged On'; do sleep 2; done
 
 : > "$CSSDIR/$CSS_GAME/console.log"
-args=(-insecure -condebug -windowed -noborder "$@" +demo_quitafterplayback 1 +playdemo bench)
+args=(-insecure -condebug -windowed -noborder "$@" +demo_quitafterplayback 1 +playdemo "${DEMO:-bench}")
 printf '%s\n' "ref=$ref" "args=${args[*]}" > "$run/args.txt"
 env | grep -E '^(DXVK_|MVK_|WINE[A-Z]*SYNC|TF2MT_)' >> "$run/args.txt"
 echo "display_start=$state" >> "$run/args.txt"
 echo "wine_session_sync=$(cat "$CSS_HOME/cache/wine-session-sync" 2>/dev/null || echo unknown)" >> "$run/args.txt"
 export TF2MT_TAG=$tag TF2MT_TRACE_DIR="Z:${run//\//\\}"
-"$CSSMT_ROOT/scripts/css.sh" "${args[@]}" >/dev/null
+follow_session_sync   # msync must match Steam's wineserver, or the game exits silently
+# started directly, not through css.sh: its leftover cleanup deletes d3d9.dll/d3d9_ref.dll when no game runs, which
+# silently turned every run into a plain DXVK run
+( cd "$CSSDIR" && "$WINE" "$CSS_STUB" -steam -game "$CSS_GAME" -novid -nojoy -nosteamcontroller -nohltv "${args[@]}" \
+  >"$run/css.log" 2>&1 & )
 
 for _ in $(seq 120); do pid=$(css_pids | head -1); [ -n "$pid" ] && break; sleep 1; done
 [ -z "${pid:-}" ] && { echo "$CSS_EXE did not start"; exit 1; }
